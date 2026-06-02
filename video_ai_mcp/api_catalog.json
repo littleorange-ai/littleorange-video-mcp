@@ -1,0 +1,3129 @@
+{
+  "operations": [
+    {
+      "doc_id": "428191615e0",
+      "title": "视频创建基础API示例",
+      "summary": "视频创建基础API示例",
+      "folder": "示例",
+      "method": "POST",
+      "path": "/v1/{model_id}",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "model_id",
+          "in": "path",
+          "description": "",
+          "required": true,
+          "example": "veo-3.1-generate-001",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "title": "提示词",
+            "description": "使用自然语言描述镜头。包括镜头类型、主体、动作、场景、光线以及任何所需的镜头运动，以减少歧义。为确保最佳效果，请保持描述内容单一。"
+          },
+          "size": {
+            "type": "string",
+            "title": "分辨率",
+            "description": "输出分辨率（宽×高）"
+          },
+          "seconds": {
+            "type": "string",
+            "title": "秒数",
+            "description": "视频生成秒数"
+          }
+        },
+        "x-apifox-orders": [
+          "prompt",
+          "size",
+          "seconds"
+        ],
+        "required": [
+          "prompt"
+        ],
+        "nullable": true
+      },
+      "example": {
+        "prompt": "A video of a cool cat on a motorcycle in the night",
+        "size": "720x1280",
+        "seconds": "4"
+      },
+      "doc_url": "https://video-ai.apifox.cn/428191615e0.md"
+    },
+    {
+      "doc_id": "428234666e0",
+      "title": "文生视频接口",
+      "summary": "文生视频接口",
+      "folder": "各模型API详细接口/Veo3.1系列",
+      "method": "POST",
+      "path": "/v1/{model_id}",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "model_id",
+          "in": "path",
+          "description": "模型ID可填写：veo-3.1-generate-001、veo-3.1-fast-generate-001、veo-3.1-lite-generate-001",
+          "required": true,
+          "example": "veo-3.1-generate-001",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "properties": {
+          "instances": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "prompt": {
+                  "type": "string",
+                  "title": "提示词",
+                  "description": "生成视频的提示词，建议使用英文"
+                }
+              },
+              "x-apifox-orders": [
+                "prompt"
+              ]
+            }
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "compressionQuality": {
+                "type": "string",
+                "title": "压缩质量",
+                "description": "视频压缩的质量等级；可选参数：optimized、lossless"
+              },
+              "durationSeconds": {
+                "type": "integer",
+                "title": "时长（秒）",
+                "description": "生成视频的持续时间，单位为秒；可选参数：4、6、8"
+              },
+              "storageUri": {
+                "type": "string",
+                "title": "存储 URI",
+                "description": "视频存储的位置 URI，未提供则返回base64编码视频字节"
+              },
+              "sampleCount": {
+                "type": "integer",
+                "title": "采样数量",
+                "description": "生成视频的采样次数；可选参数：1~4"
+              },
+              "aspectRatio": {
+                "type": "string",
+                "title": "宽高比",
+                "description": "视频的宽高比，例如 16:9；可选参数：16:9、9:16"
+              },
+              "negativePrompt": {
+                "type": "string",
+                "title": "反向提示词",
+                "description": "用于排除不希望出现的内容的描述；"
+              },
+              "personGeneration": {
+                "type": "string",
+                "title": "人物生成",
+                "description": "人物生成的相关配置或模式；可选参数：allow_adult、disallow"
+              },
+              "resolution": {
+                "type": "string",
+                "title": "分辨率",
+                "description": "生成视频的分辨率，例如 1080p；可选参数：720p、1080p、4K（lite模型暂不支持）"
+              },
+              "generateAudio": {
+                "type": "boolean",
+                "title": "生成音频",
+                "description": "是否同时生成音频轨道；可选参数：true、false"
+              },
+              "seed": {
+                "type": "integer",
+                "title": "随机种子",
+                "description": "用于控制生成结果一致性的随机种子值"
+              }
+            },
+            "required": [
+              "durationSeconds",
+              "generateAudio"
+            ],
+            "x-apifox-orders": [
+              "compressionQuality",
+              "durationSeconds",
+              "storageUri",
+              "sampleCount",
+              "aspectRatio",
+              "negativePrompt",
+              "personGeneration",
+              "resolution",
+              "generateAudio",
+              "seed"
+            ]
+          }
+        },
+        "required": [
+          "instances",
+          "parameters"
+        ],
+        "x-apifox-orders": [
+          "instances",
+          "parameters"
+        ]
+      },
+      "example": {
+        "instances": [
+          {
+            "prompt": "A beautiful sunset over the ocean with waves crashing on the shore"
+          }
+        ],
+        "parameters": {
+          "compressionQuality": "optimized",
+          "durationSeconds": 6,
+          "storageUri": "gs://video-bucket/output/",
+          "sampleCount": 2,
+          "aspectRatio": "16:9",
+          "negativePrompt": "darkness, rain",
+          "personGeneration": "allow_adult",
+          "resolution": "1080p",
+          "generateAudio": true,
+          "seed": 123456
+        }
+      },
+      "doc_url": "https://video-ai.apifox.cn/428234666e0.md"
+    },
+    {
+      "doc_id": "428252369e0",
+      "title": "文生视频接口",
+      "summary": "文生视频接口",
+      "folder": "各模型API详细接口/Sora2",
+      "method": "POST",
+      "path": "/v1/{model_id}",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "model_id",
+          "in": "path",
+          "description": "可选值：sora-2",
+          "required": true,
+          "example": "sora-2",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "title": "提示词",
+            "description": "使用自然语言描述镜头。包括镜头类型、主体、动作、场景、光线以及任何所需的镜头运动，以减少歧义。为确保最佳效果，请保持描述内容单一。"
+          },
+          "size": {
+            "type": "string",
+            "title": "分辨率",
+            "description": "输出分辨率（宽×高）。默认：720x1280。\n可选参数：720×1280、1280×720"
+          },
+          "seconds": {
+            "type": "string",
+            "title": "秒数",
+            "description": "视频生成秒数。默认：4\n可选参数：4 / 8 / 12。"
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "x-apifox-orders": [
+          "prompt",
+          "size",
+          "seconds"
+        ]
+      },
+      "example": {
+        "prompt": "A video of a cool cat on a motorcycle in the night",
+        "size": "720x1280",
+        "seconds": "4"
+      },
+      "doc_url": "https://video-ai.apifox.cn/428252369e0.md"
+    },
+    {
+      "doc_id": "428265584e0",
+      "title": "图生视频接口",
+      "summary": "图生视频接口",
+      "folder": "各模型API详细接口/Sora2",
+      "method": "POST",
+      "path": "/v1/{model_id}",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "model_id",
+          "in": "path",
+          "description": "可选值：sora-2",
+          "required": true,
+          "example": "sora-2",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "multipart/form-data",
+      "body_schema": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "description": "模型名称，用于指定生成视频所使用的模型版本",
+            "example": "sora-2",
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string",
+            "description": "提示词：使用自然语言详细描述镜头内容，包括镜头类型、主体、动作、场景、光线以及任何所需的镜头运动，以减少歧义。为确保最佳效果，请保持描述内容单一。",
+            "example": "A video of a cool cat on a motorcycle in the night"
+          },
+          "size": {
+            "description": "输出分辨率：指定生成视频的宽度×高度；默认：720x1280。\n可选参数：720×1280、1280×720",
+            "example": "720x1280",
+            "type": "string"
+          },
+          "seconds": {
+            "description": "视频时长：指定生成视频的秒数；默认：4\n可选参数：4 / 8 / 12",
+            "example": "4",
+            "type": "string"
+          },
+          "input_reference": {
+            "format": "binary",
+            "type": "string",
+            "description": "参考图片：上传一张参考图片以指导视频生成，图片尺寸必须为 720x1280 或 1280x720",
+            "example": ""
+          }
+        },
+        "required": [
+          "model",
+          "prompt",
+          "input_reference"
+        ]
+      },
+      "example": null,
+      "doc_url": "https://video-ai.apifox.cn/428265584e0.md"
+    },
+    {
+      "doc_id": "428338012e0",
+      "title": "图生视频接口",
+      "summary": "图生视频接口",
+      "folder": "各模型API详细接口/Veo3.1系列",
+      "method": "POST",
+      "path": "/v1/{model_id}",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "model_id",
+          "in": "path",
+          "description": "模型ID可填写：veo-3.1-generate-001、veo-3.1-fast-generate-001、veo-3.1-lite-generate-001",
+          "required": true,
+          "example": "veo-3.1-generate-001",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "properties": {
+          "instances": {
+            "type": "array",
+            "title": "实例列表",
+            "description": "包含生成视频任务的具体实例数组",
+            "items": {
+              "type": "object",
+              "title": "视频生成实例",
+              "description": "单个视频生成任务的配置",
+              "properties": {
+                "prompt": {
+                  "type": "string",
+                  "title": "提示词",
+                  "description": "生成视频的提示词，建议使用英文"
+                },
+                "image": {
+                  "type": "object",
+                  "title": "图像",
+                  "description": "用于生成视频的参考图像",
+                  "properties": {
+                    "bytesBase64Encoded": {
+                      "type": "string",
+                      "title": "Base64 编码数据",
+                      "description": "图像文件的 Base64 编码字符串"
+                    },
+                    "mimeType": {
+                      "type": "string",
+                      "title": "MIME 类型",
+                      "description": "图像文件的 MIME 类型，例如 image/png"
+                    }
+                  },
+                  "required": [
+                    "bytesBase64Encoded",
+                    "mimeType"
+                  ],
+                  "x-apifox-orders": [
+                    "bytesBase64Encoded",
+                    "mimeType"
+                  ]
+                }
+              },
+              "x-apifox-orders": [
+                "prompt",
+                "image"
+              ],
+              "required": [
+                "prompt",
+                "image"
+              ]
+            }
+          },
+          "parameters": {
+            "type": "object",
+            "title": "生成参数",
+            "description": "控制视频生成过程的全局参数配置",
+            "properties": {
+              "durationSeconds": {
+                "type": "integer",
+                "title": "时长（秒）",
+                "description": "生成视频的持续时间，单位为秒；可选参数：4、6、8"
+              },
+              "storageUri": {
+                "type": "string",
+                "title": "存储 URI",
+                "description": "视频存储的位置 URI"
+              },
+              "sampleCount": {
+                "type": "integer",
+                "title": "采样数量",
+                "description": "生成视频的采样次数；可选参数：1~4"
+              },
+              "aspectRatio": {
+                "type": "string",
+                "title": "宽高比",
+                "description": "视频的宽高比，例如 16:9；可选参数：16:9、9:16"
+              },
+              "negativePrompt": {
+                "type": "string",
+                "title": "反向提示词",
+                "description": "用于排除不希望出现的内容的描述"
+              },
+              "personGeneration": {
+                "type": "string",
+                "title": "人物生成",
+                "description": "人物生成的相关配置或模式；可选参数：allow_adult、disallow"
+              },
+              "resolution": {
+                "type": "string",
+                "title": "分辨率",
+                "description": "生成视频的分辨率，例如 1080p；可选参数：720p、1080p、4K（lite模型暂不支持）"
+              },
+              "generateAudio": {
+                "type": "boolean",
+                "title": "生成音频",
+                "description": "是否同时生成音频轨道；可选参数：true、false"
+              },
+              "resizeMode": {
+                "type": "string",
+                "title": "调整大小模式",
+                "description": "视频尺寸调整的模式；可选参数：pad、crop"
+              },
+              "seed": {
+                "type": "integer",
+                "title": "随机种子",
+                "description": "用于控制生成结果一致性的随机种子值"
+              },
+              "compressionQuality": {
+                "type": "string",
+                "title": "压缩质量",
+                "description": "视频压缩的质量等级；可选参数：optimized、lossless"
+              }
+            },
+            "required": [
+              "durationSeconds",
+              "sampleCount",
+              "resolution"
+            ],
+            "x-apifox-orders": [
+              "durationSeconds",
+              "storageUri",
+              "sampleCount",
+              "aspectRatio",
+              "negativePrompt",
+              "personGeneration",
+              "resolution",
+              "generateAudio",
+              "resizeMode",
+              "seed",
+              "compressionQuality"
+            ]
+          }
+        },
+        "required": [
+          "instances",
+          "parameters"
+        ],
+        "x-apifox-orders": [
+          "instances",
+          "parameters"
+        ]
+      },
+      "example": {
+        "instances": [
+          {
+            "prompt": "Expand the clouds",
+            "image": {
+              "bytesBase64Encoded": "iVBORw0KG",
+              "mimeType": "image/png"
+            }
+          }
+        ],
+        "parameters": {
+          "durationSeconds": 8,
+          "storageUri": "gs://my-video-bucket/output/",
+          "sampleCount": 1,
+          "aspectRatio": "9:16",
+          "negativePrompt": "blurry, low quality",
+          "personGeneration": "disallow",
+          "resolution": "720p",
+          "generateAudio": false,
+          "resizeMode": "crop",
+          "seed": 789012
+        }
+      },
+      "doc_url": "https://video-ai.apifox.cn/428338012e0.md"
+    },
+    {
+      "doc_id": "428347989e0",
+      "title": "查询生成任务接口",
+      "summary": "查询生成任务接口",
+      "folder": "各模型API详细接口/Veo3.1系列",
+      "method": "POST",
+      "path": "/v1/query/{model_id}/{id}",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "model_id",
+          "in": "path",
+          "description": "模型ID填写：veo-3.1-generate-001、veo-3.1-fast-generate-001、veo-3.1-lite-generate-001",
+          "required": true,
+          "example": "veo-3.1-generate-001",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "description": "",
+          "required": true,
+          "example": "001b0da9-00fd-4d9b-85c3-34cf5d2054s8",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": null,
+      "body_schema": null,
+      "example": null,
+      "doc_url": "https://video-ai.apifox.cn/428347989e0.md"
+    },
+    {
+      "doc_id": "428355733e0",
+      "title": "任务查询示例API接口",
+      "summary": "任务查询示例API接口",
+      "folder": "示例",
+      "method": "POST",
+      "path": "/v1/query/{model_id}/{id}",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "model_id",
+          "in": "path",
+          "description": "",
+          "required": true,
+          "example": "veo-3.1-generate-001",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "description": "",
+          "required": true,
+          "example": "001b0da9-00fd-4d9b-85c3-34cf5d2054s8",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": null,
+      "body_schema": null,
+      "example": null,
+      "doc_url": "https://video-ai.apifox.cn/428355733e0.md"
+    },
+    {
+      "doc_id": "428358839e0",
+      "title": "查询生成任务接口",
+      "summary": "查询生成任务接口",
+      "folder": "各模型API详细接口/Sora2",
+      "method": "POST",
+      "path": "/v1/query/{model_id}/{id}",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "model_id",
+          "in": "path",
+          "description": "",
+          "required": true,
+          "example": "sora-2",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "description": "",
+          "required": true,
+          "example": "video_69b7b2556a048190a01eb24a2211f5c4",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": null,
+      "body_schema": null,
+      "example": null,
+      "doc_url": "https://video-ai.apifox.cn/428358839e0.md"
+    },
+    {
+      "doc_id": "433482077e0",
+      "title": "视频扩展接口",
+      "summary": "视频扩展接口",
+      "folder": "各模型API详细接口/Veo3.1系列",
+      "method": "POST",
+      "path": "/v1/{model_id}",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "model_id",
+          "in": "path",
+          "description": "模型ID可填写：veo-3.1-generate-001、veo-3.1-fast-generate-001、veo-3.1-lite-generate-001",
+          "required": true,
+          "example": "veo-3.1-generate-preview",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "properties": {
+          "instances": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "prompt": {
+                  "type": "string",
+                  "title": "提示词",
+                  "description": "用于生成视频的文本描述"
+                },
+                "video": {
+                  "type": "object",
+                  "properties": {
+                    "gcsuri": {
+                      "type": "string",
+                      "title": "GCS URI",
+                      "description": "视频在 Google Cloud Storage 中的资源标识符"
+                    },
+                    "mimeType": {
+                      "type": "string",
+                      "title": "MIME 类型",
+                      "description": "视频的媒体类型，值：video/mp4"
+                    },
+                    "bytesBase64Encoded": {
+                      "type": "string",
+                      "title": "Base64 编码内容",
+                      "description": "视频内容的 Base64 编码字符串\n支持的视频：\nMP4\n720p、1080p 或 4K（1280x720、1920x1080、3840x2160、720x1280、1080x1920 或 2160x3840）\n1 - 30 秒\n24 fps（每秒帧数）\n"
+                    }
+                  },
+                  "required": [
+                    "mimeType",
+                    "bytesBase64Encoded"
+                  ],
+                  "x-apifox-orders": [
+                    "gcsuri",
+                    "bytesBase64Encoded",
+                    "mimeType"
+                  ],
+                  "description": "只能传入720p、1080p 或 4K（1280x720、1920x1080、3840x2160、720x1280、1080x1920 或 2160x3840）的MP4视频"
+                }
+              },
+              "x-apifox-orders": [
+                "prompt",
+                "video"
+              ]
+            }
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "compressionQuality": {
+                "type": "string",
+                "title": "压缩质量",
+                "description": "生成视频的压缩质量等级\n可选值：optimized、lossless"
+              },
+              "durationSeconds": {
+                "type": "integer",
+                "title": "时长（秒）",
+                "description": "生成视频的持续时间，单位为秒\n可选值：7"
+              },
+              "sampleCount": {
+                "type": "integer",
+                "title": "采样数量",
+                "description": "生成视频样本的数量\n可选值：1~4"
+              },
+              "aspectRatio": {
+                "type": "string",
+                "title": "宽高比",
+                "description": "生成视频的宽高比，例如 16:9"
+              },
+              "negativePrompt": {
+                "type": "string",
+                "title": "反向提示词",
+                "description": "用于排除不希望出现的内容的文本描述"
+              },
+              "personGeneration": {
+                "type": "string",
+                "title": "人物生成模式",
+                "description": "控制是否允许生成包含人物的视频\n可选值：dont_allow、allow_adult、allow_all"
+              },
+              "resolution": {
+                "type": "string",
+                "title": "分辨率",
+                "description": "生成视频的分辨率，例如 1080p；可选参数：720p、1080p、4K（lite模型暂不支持）"
+              },
+              "generateAudio": {
+                "type": "boolean",
+                "title": "生成音频",
+                "description": "是否为生成的视频添加音频轨道"
+              }
+            },
+            "required": [
+              "durationSeconds",
+              "sampleCount"
+            ],
+            "x-apifox-orders": [
+              "compressionQuality",
+              "durationSeconds",
+              "sampleCount",
+              "aspectRatio",
+              "negativePrompt",
+              "personGeneration",
+              "resolution",
+              "generateAudio"
+            ]
+          }
+        },
+        "required": [
+          "instances",
+          "parameters"
+        ],
+        "x-apifox-orders": [
+          "instances",
+          "parameters"
+        ]
+      },
+      "example": {
+        "instances": [
+          {
+            "prompt": "Expand the clouds",
+            "image": {
+              "bytesBase64Encoded": "iVBORw0KG",
+              "mimeType": "image/png"
+            }
+          }
+        ],
+        "parameters": {
+          "durationSeconds": 8,
+          "storageUri": "gs://my-video-bucket/output/",
+          "sampleCount": 1,
+          "aspectRatio": "9:16",
+          "negativePrompt": "blurry, low quality",
+          "personGeneration": "disallow",
+          "resolution": "720p",
+          "generateAudio": false,
+          "resizeMode": "crop",
+          "seed": 789012
+        }
+      },
+      "doc_url": "https://video-ai.apifox.cn/433482077e0.md"
+    },
+    {
+      "doc_id": "436902105e0",
+      "title": "创建视频生成任务API",
+      "summary": "创建视频生成任务API",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/视频生成",
+      "method": "POST",
+      "path": "/v1/{model_id}",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "model_id",
+          "in": "path",
+          "description": "`dreamina-seedance-2-0`,`dreamina-seedance-2-0-fast`",
+          "required": true,
+          "example": "dreamina-seedance-2-0",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "模型",
+            "description": "模型ID，可选值：dreamina-seedance-2-0(标准版)、dreamina-seedance-2-0-fast(快速版)",
+            "enum": [
+              "dreamina-seedance-2-0",
+              "dreamina-seedance-2-0-fast"
+            ]
+          },
+          "content": {
+            "type": "array",
+            "title": "多模态内容",
+            "description": "多模态输入内容，支持文本、图片、视频、音频组合传入",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "title": "内容类型",
+                  "description": "输入类型，可选值：text(文本)、image_url(图片)、video_url(视频)、audio_url(音频)",
+                  "enum": [
+                    "text",
+                    "image_url",
+                    "video_url",
+                    "audio_url"
+                  ]
+                },
+                "text": {
+                  "type": "string",
+                  "title": "文本内容",
+                  "description": "文本提示词，中文≤500字，英文≤1000词"
+                },
+                "image_url": {
+                  "type": "object",
+                  "title": "图片资源",
+                  "description": "图片输入，仅type为image_url时生效",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "title": "图片地址",
+                      "description": "支持公网URL、Base64、素材ID；格式jpeg/png/webp等，单图小于30MB"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ],
+                  "x-apifox-orders": [
+                    "url"
+                  ]
+                },
+                "role": {
+                  "type": "string",
+                  "title": "媒体角色",
+                  "description": "媒体用途标识，可选值：reference_image(参考图)、first_frame(首帧)、last_frame(尾帧)、reference_video(参考视频)、reference_audio(参考音频)",
+                  "enum": [
+                    "reference_image",
+                    "first_frame",
+                    "last_frame",
+                    "reference_video",
+                    "reference_audio"
+                  ]
+                },
+                "video_url": {
+                  "type": "object",
+                  "title": "视频资源",
+                  "description": "视频输入，仅type为video_url时生效；最多传入3个，总时长不超15秒",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "title": "视频地址",
+                      "description": "支持公网URL、素材ID；格式mp4/mov，分辨率480p~1080p，单视频小于50MB"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ],
+                  "x-apifox-orders": [
+                    "url"
+                  ]
+                },
+                "audio_url": {
+                  "type": "object",
+                  "title": "音频资源",
+                  "description": "音频输入，仅type为audio_url时生效，不可单独提交音频",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "title": "音频地址",
+                      "description": "支持公网URL、Base64、素材ID；格式wav/mp3，单音频小于15MB"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ],
+                  "x-apifox-orders": [
+                    "url"
+                  ]
+                }
+              },
+              "required": [
+                "type",
+                "role"
+              ],
+              "x-apifox-orders": [
+                "type",
+                "text",
+                "image_url",
+                "role",
+                "video_url",
+                "audio_url"
+              ]
+            }
+          },
+          "resolution": {
+            "type": "string",
+            "title": "分辨率",
+            "description": "视频清晰度，可选值：480p、720p、1080p；快速版模型不支持1080p",
+            "enum": [
+              "480p",
+              "720p",
+              "1080p"
+            ],
+            "default": "720p"
+          },
+          "ratio": {
+            "type": "string",
+            "title": "画面比例",
+            "description": "视频画幅比例，可选值：16:9、4:3、1:1、3:4、9:16、21:9、adaptive(自适应)",
+            "enum": [
+              "16:9",
+              "4:3",
+              "1:1",
+              "3:4",
+              "9:16",
+              "21:9",
+              "adaptive"
+            ],
+            "default": "adaptive"
+          },
+          "duration": {
+            "type": "integer",
+            "title": "视频时长",
+            "description": "单位秒，可选范围-1、4~15；-1代表模型智能适配时长",
+            "minimum": -1,
+            "maximum": 15,
+            "default": 5
+          },
+          "generate_audio": {
+            "type": "boolean",
+            "title": "生成音频",
+            "description": "是否自动搭配音效配音，可选值：true(开启)、false(关闭)",
+            "default": true
+          },
+          "watermark": {
+            "type": "boolean",
+            "title": "添加水印",
+            "description": "是否附带AI生成水印，可选值：true(添加)、false(不添加)",
+            "default": false
+          },
+          "return_last_frame": {
+            "type": "boolean",
+            "title": "返回尾帧",
+            "description": "是否输出视频最后一帧图片，可选值：true(返回)、false(不返回)",
+            "default": false
+          }
+        },
+        "required": [
+          "model",
+          "content",
+          "resolution",
+          "ratio",
+          "duration",
+          "generate_audio",
+          "watermark",
+          "return_last_frame"
+        ],
+        "x-apifox-orders": [
+          "model",
+          "content",
+          "resolution",
+          "ratio",
+          "duration",
+          "generate_audio",
+          "watermark",
+          "return_last_frame"
+        ]
+      },
+      "example": null,
+      "doc_url": "https://video-ai.apifox.cn/436902105e0.md"
+    },
+    {
+      "doc_id": "436902218e0",
+      "title": "查询视频生成任务API",
+      "summary": "查询视频生成任务API",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/视频生成",
+      "method": "POST",
+      "path": "/v1/query/{model_id}/{id}",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "model_id",
+          "in": "path",
+          "description": "",
+          "required": true,
+          "example": "dreamina-seedance-2-0",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "description": "",
+          "required": true,
+          "example": "cgt-2026****-****",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": null,
+      "body_schema": null,
+      "example": null,
+      "doc_url": "https://video-ai.apifox.cn/436902218e0.md"
+    },
+    {
+      "doc_id": "442560446e0",
+      "title": "文生视频",
+      "summary": "文生视频",
+      "folder": "各模型API详细接口/Vidu Q3系列/创建视频任务",
+      "method": "POST",
+      "path": "/v1/{model_id}/text2video",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "model_id",
+          "in": "path",
+          "description": "viduq3-turbo 、viduq3-pro",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "模型",
+            "description": "模型名称\n可选值：viduq3-turbo、viduq3-pro\n\n- viduq3-turbo：对比viduq3-pro，生成速度更快\n- viduq3-pro：高效生成优质音视频内容，让视频内容更生动、更形象、更立体，效果更好"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "提示词",
+            "description": "生成视频的文本描述。\n注：字符长度不能超过 5000 个字符"
+          },
+          "duration": {
+            "type": "integer",
+            "title": "生成时间",
+            "description": "默认值依据模型而定：\n- viduq3-pro、viduq3-turbo: 默认5秒，可选：1-16"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "随机种子",
+            "description": "当默认不传或者传0时，会使用随机数替代\n手动设置则使用设置的种子"
+          },
+          "aspect_ratio": {
+            "type": "string",
+            "title": "宽高比",
+            "description": "默认 16:9，可选值：16:9、9:16、3:4、4:3、1:1\n注：3:4、4:3仅支持q2、q3系列模型"
+          },
+          "resolution": {
+            "type": "string",
+            "title": "分辨率",
+            "description": "默认值依据模型和视频时长而定：\n- viduq3-pro、viduq3-turbo(1-16秒)：默认 720p，可选：540p、720p、1080p"
+          },
+          "audio": {
+            "type": "boolean",
+            "title": "是否使用音视频直出能力",
+            "description": "默认为true，枚举值为：\n- false：不需要音视频直出，输出静音视频\n- true：需要音画同步，输出声音的视频（包括台词和音效）\n注1：仅q3系列模型支持该参数"
+          },
+          "payload": {
+            "type": "string",
+            "title": "透传参数",
+            "description": "不做任何处理，仅数据传输\n注：最多 1048576个字符"
+          },
+          "watermark": {
+            "type": "boolean",
+            "title": "是否添加水印",
+            "description": "- true：添加水印；\n- false：不添加水印；\n注1：目前水印内容为固定，内容由AI生成，默认不加\n注2：您可以通过watermarked_url参数查询获取带水印的视频内容，详情见查询任务接口"
+          },
+          "wm_position": {
+            "type": "integer",
+            "title": "水印位置",
+            "description": "表示水印出现在图片的位置，可选项为：\n1：左上角\n2：右上角\n3：右下角\n4：左下角\n默认为：3"
+          },
+          "wm_url": {
+            "type": "string",
+            "title": "水印URL",
+            "description": "此处为图片URL\n不传时，使用默认水印：内容由AI生成"
+          },
+          "meta_data": {
+            "type": "string",
+            "title": "元数据标识",
+            "description": "json格式字符串，透传字段，您可以 自定义格式 或使用 示例格式 ，示例如下：\n\\{\n\"Label\": \"your_label\",\n\"ContentProducer\": \"your_content_producer\",\n\"ContentPropagator\": \"your_content_propagator\",\n\"ProduceID\": \"your_product_id\",\n\"PropagateID\": \"your_propagate_id\",\n\"ReservedCode1\": \"your_reserved_code1\",\n\"ReservedCode2\": \"your_reserved_code2\"\n\\}\n该参数为空时，默认使用vidu生成的元数据标识"
+          },
+          "callback_url": {
+            "type": "string",
+            "title": "Callback 协议",
+            "description": "需要您在创建任务时主动设置 callback_url，请求方法为 POST，当视频生成任务有状态变化时，Vidu 将向此地址发送包含任务最新状态的回调请求。回调请求内容结构与查询任务API的返回体一致\n回调返回的\"status\"包括以下状态：\n- processing 任务处理中\n- success 任务完成（如发送失败，回调三次）\n- failed 任务失败（如发送失败，回调三次）\nVidu采用回调签名算法进行认证，详情见：[回调签名算法](https://platform.vidu.cn/docs/callback-signature)"
+          }
+        },
+        "required": [
+          "model",
+          "prompt"
+        ],
+        "x-apifox-orders": [
+          "model",
+          "prompt",
+          "duration",
+          "seed",
+          "aspect_ratio",
+          "resolution",
+          "audio",
+          "payload",
+          "watermark",
+          "wm_position",
+          "wm_url",
+          "meta_data",
+          "callback_url"
+        ]
+      },
+      "example": {
+        "model": "viduq3-turbo",
+        "prompt": "你的视频生成描述文本",
+        "duration": 5,
+        "seed": 0,
+        "aspect_ratio": "16:9",
+        "resolution": "720p",
+        "audio": true,
+        "payload": "",
+        "off_peak": false,
+        "watermark": false,
+        "wm_position": 3,
+        "wm_url": "",
+        "meta_data": "{\"Label\":\"\",\"ContentProducer\":\"\",\"ContentPropagator\":\"\",\"ProduceID\":\"\",\"PropagateID\":\"\",\"ReservedCode1\":\"\",\"ReservedCode2\":\"\"}",
+        "callback_url": ""
+      },
+      "doc_url": "https://video-ai.apifox.cn/442560446e0.md"
+    },
+    {
+      "doc_id": "442587982e0",
+      "title": "图生视频",
+      "summary": "图生视频",
+      "folder": "各模型API详细接口/Vidu Q3系列/创建视频任务",
+      "method": "POST",
+      "path": "/v1/{model_id}/img2video",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "model_id",
+          "in": "path",
+          "description": "可选值：viduq3-turbo、viduq3-pro、viduq3-pro-fast",
+          "required": true,
+          "example": "viduq3-pro-fast",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "模型名称\n可选值：viduq3-turbo、viduq3-pro、viduq3-pro-fast\n- viduq3-pro-fast：高效生成优质音视频内容，生成速度更快，性价比高\n- viduq3-turbo：对比viduq3-pro，生成速度更快\n- viduq3-pro：高效生成优质音视频内容，让视频内容更生动、更形象、更立体，效果更好",
+            "title": "模型"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "首帧图像\n模型将以此参数中传入的图片为首帧画面来生成视频。\n注1：支持传入图片 Base64 编码或图片URL（确保可访问）；\n注2：只支持输入 1 张图；\n注3：图片支持 png、jpeg、jpg、webp格式；\n注4：图片比例需要小于 1:4 或者 4:1 ；\n注5：图片大小不超过 50 MB；\n注6：请注意，http请求的post body不超过20MB，且编码必须包含适当的内容类型字符串，例如：\n`data:image/png;base64,{base64_encode}`",
+            "title": "图片"
+          },
+          "prompt": {
+            "type": "string",
+            "description": "文本提示词\n生成视频的文本描述。\n注1：字符长度不能超过 5000 个字符\n注2：若使用is_rec推荐提示词参数，模型将不考虑此参数所输入的提示词",
+            "title": "提示词"
+          },
+          "audio": {
+            "type": "boolean",
+            "description": "是否使用音视频直出能力，默认为false，枚举值为：\n- false：不需要音视频直出，输出静音视频\n- true：需要音视频直出，输出带台词以及背景音的视频\n注1：该参数为true时，voice_id参数才生效\n注2：该参数为true时，仅q3模型支持错峰\n注3：当model 为q3-pro或q3-turbo 时，该参数默认值为true",
+            "title": "是否音频"
+          },
+          "is_rec": {
+            "type": "boolean",
+            "description": "是否使用推荐提示词\n- true：是，由系统自动推荐提示词，并使用提示词内容生成视频，推荐提示词数量=1\n- false：否，根据输入的prompt生成视频\n注意：启用推荐提示词后，每个任务多消耗10积分",
+            "title": "是否推荐"
+          },
+          "duration": {
+            "type": "integer",
+            "description": "视频时长\nviduq3-pro、viduq3-turbo viduq3-pro-fast 默认为 5，可选：1 - 16",
+            "title": "时长"
+          },
+          "seed": {
+            "type": "integer",
+            "description": "随机种子\n当默认不传或者传0时，会使用随机数替代\n手动设置则使用设置的种子",
+            "title": "种子"
+          },
+          "resolution": {
+            "type": "string",
+            "description": "分辨率参数，默认值依据模型和视频时长而定：\n- viduq3-pro-fast 1-16秒：默认 720p，可选：720p、1080p\n- viduq3-pro 、viduq3-turbo 1-16秒：默认 720p，可选：540p、720p、1080p",
+            "title": "分辨率"
+          },
+          "payload": {
+            "type": "string",
+            "description": "透传参数\n不做任何处理，仅数据传输\n注：最多 1048576个字符",
+            "title": "透传"
+          },
+          "watermark": {
+            "type": "boolean",
+            "description": "是否添加水印\n- true：添加水印；\n- false：不添加水印；\n注1：目前水印内容为固定，内容由AI生成，默认不加\n注2：您可以通过watermarked_url参数查询获取带水印的视频内容，详情见查询任务接口",
+            "title": "水印"
+          },
+          "wm_position": {
+            "type": "integer",
+            "description": "水印位置，表示水印出现在图片的位置，可选项为：\n1：左上角\n2：右上角\n3：右下角\n4：左下角\n默认为：3",
+            "title": "水印位置"
+          },
+          "wm_url": {
+            "type": "string",
+            "description": "水印内容，此处为图片URL\n不传时，使用默认水印：内容由AI生成",
+            "title": "水印 URL"
+          },
+          "meta_data": {
+            "type": "string",
+            "description": "元数据标识，json格式字符串，透传字段，您可以 自定义格式 或使用 示例格式 ，示例如下：\n\\{\n\"Label\": \"your_label\",\n\"ContentProducer\": \"your_content_producer\",\n\"ContentPropagator\": \"your_content_propagator\",\n\"ProduceID\": \"your_product_id\",\n\"PropagateID\": \"your_propagate_id\",\n\"ReservedCode1\": \"your_reserved_code1\",\n\"ReservedCode2\": \"your_reserved_code2\"\n\\}\n该参数为空时，默认使用vidu生成的元数据标识",
+            "title": "元数据"
+          },
+          "callback_url": {
+            "type": "string",
+            "description": "Callback 协议\n需要您在创建任务时主动设置 callback_url，请求方法为 POST，当视频生成任务有状态变化时，Vidu 将向此地址发送包含任务最新状态的回调请求。回调请求内容结构与查询任务API的返回体一致\n回调返回的\"status\"包括以下状态：\n- processing 任务处理中\n- success 任务完成（如发送失败，回调三次）\n- failed 任务失败（如发送失败，回调三次）\nVidu采用回调签名算法进行认证，详情见：[回调签名算法](https://platform.vidu.cn/docs/callback-signature)",
+            "title": "回调地址"
+          }
+        },
+        "required": [
+          "model",
+          "images"
+        ],
+        "x-apifox-orders": [
+          "model",
+          "images",
+          "prompt",
+          "audio",
+          "is_rec",
+          "duration",
+          "seed",
+          "resolution",
+          "payload",
+          "watermark",
+          "wm_position",
+          "wm_url",
+          "meta_data",
+          "callback_url"
+        ]
+      },
+      "example": {
+        "model": "viduq3-pro-fast",
+        "images": [
+          "https://prod-ss-images.s3.cn-northwest-1.amazonaws.com.cn/vidu-maas/template/image2video.png"
+        ],
+        "prompt": "The astronaut waved and the camera moved up.",
+        "audio": true,
+        "voice_id": "professional_host",
+        "duration": 5,
+        "seed": 0,
+        "resolution": "1080p",
+        "movement_amplitude": "auto",
+        "off_peak": false
+      },
+      "doc_url": "https://video-ai.apifox.cn/442587982e0.md"
+    },
+    {
+      "doc_id": "442690318e0",
+      "title": "首尾帧生视频",
+      "summary": "首尾帧生视频",
+      "folder": "各模型API详细接口/Vidu Q3系列/创建视频任务",
+      "method": "POST",
+      "path": "/v1/{model_id}/start-end2video",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "model_id",
+          "in": "path",
+          "description": "viduq3-turbo 、viduq3-pro",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "title": "Vidu 视频生成请求体 Schema",
+        "required": [
+          "model",
+          "images"
+        ],
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "模型名称\n可选值：viduq3-turbo、viduq3-pro\n- viduq3-turbo：对比viduq3-pro，生成速度更快\n- viduq3-pro：高效生成优质音视频内容，让视频内容更生动、更形象、更立体，效果更好"
+          },
+          "images": {
+            "type": "array",
+            "description": "图像\n支持输入两张图，上传的第一张图片视作首帧图，第二张图片视作尾帧图，模型将以此参数中传入的图片来生成视频\n\n注1: 首尾帧两张输入图的分辨率需相近，首帧图的分辨率/尾帧图的分辨率要在0.8～1.25之间。且图片比例需要小于1:4或者4:1；\n注2: 支持传入图片 Base64 编码或图片URL（确保可访问）；\n注3: 图片支持 png、jpeg、jpg、webp格式；\n注4: 图片大小不超过50M；\n注5: 请注意，http请求的post body不超过**20MB**，且编码必须包含适当的内容类型字符串，例如：`data:image/png;base64,{base64_encode}`",
+            "items": {
+              "type": "string"
+            }
+          },
+          "prompt": {
+            "type": "string",
+            "description": "文本提示词\n生成视频的文本描述。\n注1：字符长度不能超过 5000 个字符\n注2：若使用is_rec推荐提示词参数，模型将不考虑此参数所输入的提示词"
+          },
+          "is_rec": {
+            "type": "boolean",
+            "description": "是否使用推荐提示词\n- true：是，由系统自动推荐提示词，并使用提示词内容生成视频，推荐提示词数量=1\n- false：否，根据输入的prompt生成视频\n注意：启用推荐提示词后，每个任务多消耗10积分"
+          },
+          "duration": {
+            "type": "integer",
+            "description": "视频时长参数，默认值依据模型而定：\n- viduq3-pro 、viduq3-turbo默认为 5，可选：1 - 16\n"
+          },
+          "seed": {
+            "type": "integer",
+            "description": "随机种子\n当默认不传或者传0时，会使用随机数替代\n手动设置则使用设置的种子"
+          },
+          "resolution": {
+            "type": "string",
+            "description": "分辨率参数，默认值依据模型和视频时长而定：\n- viduq3-pro 、viduq3-turbo1-16秒：默认 720p，可选：540p、720p、1080p"
+          },
+          "audio": {
+            "type": "boolean",
+            "description": "是否使用音视频直出能力，默认为true，枚举值为：\n- false：不需要音视频直出，输出静音视频\n- true：需要音画同步，输出声音的视频（包括台词和音效）\n注1：仅q3系列模型支持该参数"
+          },
+          "payload": {
+            "type": "string",
+            "description": "透传参数\n不做任何处理，仅数据传输\n注：最多 1048576个字符"
+          },
+          "watermark": {
+            "type": "boolean",
+            "description": "是否添加水印\n- true：添加水印；\n- false：不添加水印；\n注1：目前水印内容为固定，内容由AI生成，默认不加\n注2：您可以通过watermarked_url参数查询获取带水印的视频内容，详情见查询任务接口"
+          },
+          "wm_position": {
+            "type": "integer",
+            "description": "水印位置，表示水印出现在图片的位置，可选项为：\n1：左上角\n2：右上角\n3：右下角\n4：左下角\n默认为：3"
+          },
+          "wm_url": {
+            "type": "string",
+            "description": "水印内容，此处为图片URL\n不传时，使用默认水印：内容由AI生成"
+          },
+          "meta_data": {
+            "type": "string",
+            "description": "元数据标识，json格式字符串，透传字段，您可以 自定义格式 或使用 示例格式 ，示例如下：\n\\{\n\"Label\": \"your_label\",\n\"ContentProducer\": \"your_content_producer\",\n\"ContentPropagator\": \"your_content_propagator\",\n\"ProduceID\": \"your_product_id\",\n\"PropagateID\": \"your_propagate_id\",\n\"ReservedCode1\": \"your_reserved_code1\",\n\"ReservedCode2\": \"your_reserved_code2\"\n\\}\n该参数为空时，默认使用vidu生成的元数据标识"
+          },
+          "callback_url": {
+            "type": "string",
+            "description": "Callback 协议\n需要您在创建任务时主动设置 callback_url，请求方法为 POST，当视频生成任务有状态变化时，Vidu 将向此地址发送包含任务最新状态的回调请求。回调请求内容结构与查询任务API的返回体一致\n回调返回的\"status\"包括以下状态：\n- processing 任务处理中\n- success 任务完成（如发送失败，回调三次）\n- failed 任务失败（如发送失败，回调三次）\nVidu采用回调签名算法进行认证，详情见：[回调签名算法](https://platform.vidu.cn/docs/callback-signature)"
+          }
+        },
+        "additionalProperties": false,
+        "x-apifox-orders": [
+          "model",
+          "images",
+          "prompt",
+          "is_rec",
+          "duration",
+          "seed",
+          "resolution",
+          "audio",
+          "payload",
+          "watermark",
+          "wm_position",
+          "wm_url",
+          "meta_data",
+          "callback_url"
+        ]
+      },
+      "example": {
+        "model": "viduq3-turbo",
+        "style": "general",
+        "prompt": "你的视频生成描述文本",
+        "duration": 5,
+        "seed": 0,
+        "aspect_ratio": "16:9",
+        "resolution": "720p",
+        "movement_amplitude": "auto",
+        "bgm": false,
+        "audio": true,
+        "payload": "",
+        "off_peak": false,
+        "watermark": false,
+        "wm_position": 3,
+        "wm_url": "",
+        "meta_data": "{\"Label\":\"\",\"ContentProducer\":\"\",\"ContentPropagator\":\"\",\"ProduceID\":\"\",\"PropagateID\":\"\",\"ReservedCode1\":\"\",\"ReservedCode2\":\"\"}",
+        "callback_url": ""
+      },
+      "doc_url": "https://video-ai.apifox.cn/442690318e0.md"
+    },
+    {
+      "doc_id": "442695142e0",
+      "title": "参考生视频（主体调用）",
+      "summary": "参考生视频（主体调用）",
+      "folder": "各模型API详细接口/Vidu Q3系列/创建视频任务",
+      "method": "POST",
+      "path": "/v1/{model_id}/reference2video",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "model_id",
+          "in": "path",
+          "description": "可选值：viduq3-turbo、viduq3",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "模型",
+            "description": "模型名称可选值：viduq3-turbo、viduq3\n- viduq3-turbo：支持智能切镜，支持音画同出，生成速度最快，性价比最高\n- viduq3：支持智能切镜，支持音画同出，多机位的一致性更出色"
+          },
+          "subjects": {
+            "type": "array",
+            "title": "主体列表",
+            "description": "图片主体信息支持1-7个主体，主体图片共1 ～ 7张",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "title": "名称",
+                  "description": "主体id，后续生成时可以通过@主体id的方式使用"
+                },
+                "images": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "图片URL列表",
+                  "description": "主体图片，该主体对应的图片url，与videos必填一个\n注1：支持传入图片 Base64 编码或图片URL（确保可访问）；\n注2：最多支持输入 3 张图；\n注3：图片支持 png、jpeg、jpg、webp格式；\n注4：图片比例需要小于 1:4 或者 4:1 ；\n注5：请注意，base64 decode之后的字节长度需要小于20M，且编码必须包含适当的内容类型字符串，例如：`data:image/png;base64,{base64_encode}`"
+                },
+                "videos": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "视频URL列表",
+                  "description": "主体视频，该主体对应的视频url，与videos必填一个\n注1： 仅viduq2-pro模型支持使用视频主体\n注2：每个主体中的图片和视频，共享3个槽位\n注3：支持1个5秒视频\n注4：支持传入视频 Base64 编码或URL（确保可访问）\n注5：视频支持 mp4、avi、mov格式\n注6：视频像素不能小于 128*128，且比例需要小于1:4或者4:1\n注7：请注意，base64 decode之后的字节长度需要小于20M，且编码必须包含适当的内容类型字符串，例如：\n`data:video/mp4;base64,{base64_encode}`"
+                },
+                "voice_id": {
+                  "type": "string",
+                  "title": "语音ID",
+                  "description": "用来决定视频中的声音音色，为空时系统会自动推荐，可选枚举值参考列表：[新音色列表](https://shengshu.feishu.cn/sheets/EgFvs6DShhiEBStmjzccr5gonOg)\n同时您可以使用[声音复刻API](https://platform.vidu.cn/docs/voice-clone)来复刻任意音色，voice_id可以互通"
+                }
+              },
+              "x-apifox-orders": [
+                "name",
+                "images",
+                "videos",
+                "voice_id"
+              ],
+              "required": [
+                "name"
+              ]
+            }
+          },
+          "prompt": {
+            "type": "string",
+            "title": "提示词",
+            "description": "文本提示词生成视频的文本描述。\n注1：字符长度不能超过 2000 个字符\n注2：使用sujects主体参数时，可以通过@主体id 来表示主体内容，例如：\"@1 和 @2 在一起吃火锅，并且旁白音说火锅大家都爱吃。\""
+          },
+          "audio": {
+            "type": "boolean",
+            "title": "是否启用音频",
+            "description": "是否使用音视频直出能力，默认false，可选值 true、false\n- true：使用音视频直出能力。\n- false：不使用音视频直出能力。"
+          },
+          "audio_type": {
+            "type": "string",
+            "title": "音频类型",
+            "description": "音频类型，audio为true时必填，默认为all\n- all：音效+人声\n- speech_only：仅人声\n- sound_effect_only：仅音效"
+          },
+          "duration": {
+            "type": "integer",
+            "title": "持续时间",
+            "description": "视频时长参数，默认值依据模型而定：\nviduq3-turbo：默认5秒，可选：1 - 16\nviduq3：默认5秒，可选：3 - 16"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "随机种子",
+            "description": "随机种子当默认不传或者传0时，会使用随机数替代手动设置则使用设置的种子"
+          },
+          "aspect_ratio": {
+            "type": "string",
+            "title": "宽高比",
+            "description": "比例默认 16:9，可选值如下：16:9、9:16、1:1\n注：q2模型 支持任意宽高比"
+          },
+          "resolution": {
+            "type": "string",
+            "title": "分辨率",
+            "description": "分辨率参数，默认值依据模型和视频时长而定：\nviduq3-turbo（1-16秒）：默认 720p, 可选：540p、720p、1080p\nviduq3（3-16秒）：默认 720p, 可选：540p、720p、1080p"
+          },
+          "movement_amplitude": {
+            "type": "string",
+            "title": "运动幅度",
+            "description": "运动幅度默认 auto，可选值：auto、small、medium、large\n注：使用q2模型时该参数不生效"
+          },
+          "payload": {
+            "type": "string",
+            "title": "负载数据",
+            "description": "透传参数不做任何处理，仅数据传输注：最多 1048576个字符"
+          },
+          "watermark": {
+            "type": "boolean",
+            "title": "添加水印",
+            "description": "是否添加水印\n- true：添加水印；\n- false：不添加水印；\n注1：目前水印内容为固定，内容由AI生成，默认不加\n注2：您可以通过watermarked_url参数查询获取带水印的视频内容，详情见查询任务接口"
+          },
+          "wm_position": {
+            "type": "integer",
+            "title": "水印位置",
+            "description": "水印位置，表示水印出现在图片的位置，默认为：3，可选项为：\n1：左上角\n2：右上角\n3：右下角\n4：左下角"
+          },
+          "wm_url": {
+            "type": "string",
+            "title": "水印URL",
+            "description": "水印内容，此处为图片URL不传时，使用默认水印：内容由AI生成"
+          },
+          "meta_data": {
+            "type": "string",
+            "title": "元数据",
+            "description": "元数据标识，json格式字符串，透传字段，您可以 自定义格式 或使用 示例格式 ，示例如下：\n\\{\n\"Label\": \"your_label\",\"ContentProducer\": \"yourcontentproducer\",\"ContentPropagator\": \"your_content_propagator\",\"ProduceID\": \"yourproductid\", \"PropagateID\": \"your_propagate_id\",\"ReservedCode1\": \"yourreservedcode1\", \"ReservedCode2\": \"your_reserved_code2\"\n\\}\n该参数为空时，默认使用vidu生成的元数据标识"
+          },
+          "callback_url": {
+            "type": "string",
+            "title": "回调URL",
+            "description": "Callback 协议\n需要您在创建任务时主动设置 callback_url，请求方法为 POST，当视频生成任务有状态变化时，Vidu 将向此地址发送包含任务最新状态的回调请求。回调请求内容结构与查询任务API的返回体一致\n回调返回的\"status\"包括以下状态：\n- processing 任务处理中\n- success 任务完成（如发送失败，回调三次）\n- failed 任务失败（如发送失败，回调三次）\nVidu采用回调签名算法进行认证，详情见：[回调签名算法](https://platform.vidu.cn/docs/callback-signature)"
+          },
+          "auto_subjects": {
+            "type": "boolean",
+            "description": "- 是否使用智能主体库能力，默认false，可选值 true、false\n- true：使用智能主体库能力。\n- false：不使用智能主体库能力。",
+            "title": "智能主体库"
+          }
+        },
+        "required": [
+          "subjects",
+          "prompt",
+          "model"
+        ],
+        "x-apifox-orders": [
+          "model",
+          "auto_subjects",
+          "subjects",
+          "prompt",
+          "audio",
+          "audio_type",
+          "duration",
+          "seed",
+          "aspect_ratio",
+          "resolution",
+          "movement_amplitude",
+          "payload",
+          "watermark",
+          "wm_position",
+          "wm_url",
+          "meta_data",
+          "callback_url"
+        ]
+      },
+      "example": {
+        "model": "viduq3",
+        "subjects": [
+          {
+            "name": "subject_1",
+            "images": [
+              "https://example.com/image1.jpg",
+              "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+            ],
+            "videos": [
+              "data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQ..."
+            ]
+          }
+        ],
+        "voice_id": "your_voice_id",
+        "prompt": "@subject_1 在公园散步，画面明亮自然",
+        "audio": false,
+        "audio_type": "all",
+        "duration": 5,
+        "seed": 0,
+        "aspect_ratio": "16:9",
+        "resolution": "720p",
+        "movement_amplitude": "auto",
+        "payload": "custom_transmission_data",
+        "off_peak": false,
+        "watermark": false,
+        "wm_position": 3,
+        "wm_url": "https://example.com/watermark.png",
+        "meta_data": "{\"Label\":\"test\",\"ContentProducer\":\"user\",\"ProduceID\":\"task_001\"}",
+        "callback_url": "https://your-server.com/callback"
+      },
+      "doc_url": "https://video-ai.apifox.cn/442695142e0.md"
+    },
+    {
+      "doc_id": "442695143e0",
+      "title": "参考生视频（非主体调用）",
+      "summary": "参考生视频（非主体调用）",
+      "folder": "各模型API详细接口/Vidu Q3系列/创建视频任务",
+      "method": "POST",
+      "path": "/v1/{model_id}/reference2video",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "model_id",
+          "in": "path",
+          "description": "可选值：viduq3-mix、viduq3-turbo、viduq3",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "模型",
+            "description": "模型名称可选值：viduq3-mix、viduq3-turbo、viduq3\n- viduq3-mix：画面质感强，支持智能切镜，支持音画同出，动态效果好，均衡性最强\n- viduq3-turbo：支持智能切镜，支持音画同出，生成速度最快，性价比最高\n- viduq3：支持智能切镜，支持音画同出，多机位的一致性更出色"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "图片",
+            "description": "图像参考支持上传1～7张图片，模型将以此参数中传入的图片中的主题为参考生成具备主体一致的视频。\n注1： viduq3-mix、viduq3-turbo、viduq3模型支持上传1～7张图片\n注2：使用viduq2-pro模型时，如果不上传视频，则支持上传1-7张图，如果上传视频则支持1-4张图\n注3：支持传入图片 Base64 编码或图片URL（确保可访问）\n注4：图片支持 png、jpeg、jpg、webp格式\n注5：图片像素不能小于 128*128，且比例需要小于1:4或者4:1，且大小不超过50M。\n注6：请注意，http请求的post body不超过**20MB**，且编码必须包含适当的内容类型字符串，例如：`data:image/png;base64,\\{base64_encode\\}`"
+          },
+          "videos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "视频",
+            "description": "视频参考支持上传1～2个视频，模型将以此参数中传入的视频作为参考，生成具备主体一致的视频。\n注1： 仅viduq2-pro模型支持该参数\n注2：使用视频参考功能时，最多支持上传 1个8秒 视频 或 2个5秒 视频\n注3：视频支持 mp4、avi、mov格式\n注4：视频像素不能小于 128*128，且比例需要小于1:4或者4:1，且大小不超过100M。\n注5：请注意，base64 decode之后的字节长度需要小于20M，且编码必须包含适当的内容类型字符串，例如：data:video/mp4;base64,\\{base64_encode\\}"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "提示词",
+            "description": "文本提示词生成视频的文本描述。\n注：字符长度不能超过 2000 个字符。"
+          },
+          "bgm": {
+            "type": "boolean",
+            "title": "背景音乐",
+            "description": "是否为生成的视频添加背景音乐。默认：false，可选值 true 、false\n- 传 true 时系统将从预设 BGM 库中自动挑选合适的音乐并添加；不传或为 false 则不添加 BGM。\n- BGM不限制时长，系统根据视频时长自动适配\n- BGM参数在q2系列模型的duration为 9秒 或 10秒 时不生效\n- 该参数在q3系列模型中不生效"
+          },
+          "duration": {
+            "type": "integer",
+            "title": "时长",
+            "description": "视频时长参数，默认值依据模型而定：\nviduq3-turbo、viduq3-mix：默认5秒，可选3 - 16\nviduq3：默认5秒，可选3 - 16"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "随机种子",
+            "description": "随机种子当默认不传或者传0时，会使用随机数替代手动设置则使用设置的种子"
+          },
+          "aspect_ratio": {
+            "type": "string",
+            "title": "宽高比",
+            "description": "比例参数，q2、q3模型支持任意比例或 auto\n默认 16:9，可选值如下：1:1、9:16、16:9、3:4、4:3\nauto：根据输入图或视频自动推荐"
+          },
+          "resolution": {
+            "type": "string",
+            "title": "分辨率",
+            "description": "分辨率参数，默认值依据模型和视频时长而定：\nviduq3-mix（3-16秒）：默认 720p, 可选：720p、1080p\nviduq3-turbo（3-16秒）：默认 720p, 可选：540p、720p、1080p\nviduq3（3-16秒）：默认 720p, 可选：540p、720p、1080p"
+          },
+          "movement_amplitude": {
+            "type": "string",
+            "title": "运动幅度",
+            "description": "运动幅度默认 auto，可选值：auto、small、medium、large\n注：使用q2、q3系列模型时该参数不生效"
+          },
+          "payload": {
+            "type": "string",
+            "title": "负载数据",
+            "description": "透传参数不做任何处理，仅数据传输\n注：最多 1048576个字符"
+          },
+          "watermark": {
+            "type": "boolean",
+            "title": "水印",
+            "description": "是否添加水印\n- true：添加水印；\n- false：不添加水印；\n注1：目前水印内容为固定，内容由AI生成，默认不加\n注2：您可以通过watermarked_url参数查询获取带水印的视频内容，详情见查询任务接口"
+          },
+          "wm_position": {
+            "type": "integer",
+            "title": "水印位置",
+            "description": "水印位置，表示水印出现在图片的位置，默认为：3，可选项为：\n1：左上角\n2：右上角\n3：右下角\n4：左下角"
+          },
+          "wm_url": {
+            "type": "string",
+            "title": "水印链接",
+            "description": "水印内容，此处为图片URL不传时，使用默认水印：内容由AI生成"
+          },
+          "meta_data": {
+            "type": "string",
+            "title": "元数据",
+            "description": "元数据标识，json格式字符串，透传字段，您可以 自定义格式 或使用 示例格式 ，示例如下：\n\\{\n\"Label\": \"your_label\",\"ContentProducer\": \"your_content_producer\",\"ContentPropagator\": \"your_content_propagator\",\"ProduceID\": \"your_product_id\", \"PropagateID\": \"your_propagate_id\",\"ReservedCode1\": \"your_reserved_code1\", \"ReservedCode2\": \"your_reserved_code2\"\n\\}\n该参数为空时，默认使用vidu生成的元数据标识"
+          },
+          "callback_url": {
+            "type": "string",
+            "title": "回调地址",
+            "description": "Callback 协议\n需要您在创建任务时主动设置 callback_url，请求方法为 POST，当视频生成任务有状态变化时，Vidu 将向此地址发送包含任务最新状态的回调请求。回调请求内容结构与查询任务API的返回体一致\n回调返回的\"status\"包括以下状态：\n- processing 任务处理中\n- success 任务完成（如发送失败，回调三次）\n- failed 任务失败（如发送失败，回调三次）\nVidu采用回调签名算法进行认证，详情见：[回调签名算法](https://platform.vidu.cn/docs/callback-signature)"
+          }
+        },
+        "required": [
+          "model",
+          "images",
+          "prompt"
+        ],
+        "x-apifox-orders": [
+          "model",
+          "images",
+          "videos",
+          "prompt",
+          "bgm",
+          "duration",
+          "seed",
+          "aspect_ratio",
+          "resolution",
+          "movement_amplitude",
+          "payload",
+          "watermark",
+          "wm_position",
+          "wm_url",
+          "meta_data",
+          "callback_url"
+        ]
+      },
+      "example": {
+        "model": "viduq3",
+        "images": [
+          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg...",
+          "https://example.com/image.jpg"
+        ],
+        "videos": [
+          "data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21j...",
+          "https://example.com/reference.mp4"
+        ],
+        "prompt": "生成一段动态流畅的视频，画面清晰，运镜稳定",
+        "bgm": false,
+        "duration": 5,
+        "seed": 0,
+        "aspect_ratio": "16:9",
+        "resolution": "720p",
+        "movement_amplitude": "auto",
+        "payload": "",
+        "off_peak": false,
+        "watermark": false,
+        "wm_position": 3,
+        "wm_url": "",
+        "meta_data": "{\"Label\":\"\",\"ContentProducer\":\"\",\"ContentPropagator\":\"\",\"ProduceID\":\"\",\"PropagateID\":\"\",\"ReservedCode1\":\"\",\"ReservedCode2\":\"\"}",
+        "callback_url": "https://your-domain.com/callback"
+      },
+      "doc_url": "https://video-ai.apifox.cn/442695143e0.md"
+    },
+    {
+      "doc_id": "442956667e0",
+      "title": "查询生成物接口",
+      "summary": "查询生成物接口",
+      "folder": "各模型API详细接口/Vidu Q3系列/任务管理",
+      "method": "GET",
+      "path": "/v1/query/{model_id}/{id}",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "model_id",
+          "in": "path",
+          "description": "",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "description": "任务id，由创建任务接口创建成功返回",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": null,
+      "body_schema": null,
+      "example": null,
+      "doc_url": "https://video-ai.apifox.cn/442956667e0.md"
+    },
+    {
+      "doc_id": "463213838e0",
+      "title": "查询素材资产信息",
+      "summary": "查询素材资产信息",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/AIGC(虚拟人)素材管理/素材",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": true,
+          "example": "GetAsset",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "properties": {
+          "Id": {
+            "type": "string",
+            "title": "素材ID",
+            "description": "Asset（素材资产）的 Id。"
+          }
+        },
+        "x-apifox-orders": [
+          "Id"
+        ],
+        "required": [
+          "Id"
+        ]
+      },
+      "example": {
+        "Id": "Asset-xxxx"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463213838e0.md"
+    },
+    {
+      "doc_id": "463213961e0",
+      "title": "查询素材资产组信息",
+      "summary": "查询素材资产组信息",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/AIGC(虚拟人)素材管理/素材组",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": true,
+          "example": [
+            "GetAssetGroup"
+          ],
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "title": "查询素材资产组合请求体",
+        "description": "GetAssetGroup API 的请求参数，用于查询指定素材资产组合的详细信息",
+        "properties": {
+          "Id": {
+            "type": "string",
+            "title": "资产组合ID",
+            "description": "需要查询的素材资产组合（Asset Group）的唯一标识符",
+            "examples": [
+              "group-2026**********-*****"
+            ]
+          }
+        },
+        "required": [
+          "Id"
+        ],
+        "additionalProperties": false,
+        "x-apifox-orders": [
+          "Id"
+        ]
+      },
+      "example": {
+        "Id": "group-2026**********-*****"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463213961e0.md"
+    },
+    {
+      "doc_id": "463214320e0",
+      "title": "查询素材资产组列表",
+      "summary": "查询素材资产组列表",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/AIGC(虚拟人)素材管理/素材组",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": true,
+          "example": [
+            "ListAssetGroups"
+          ],
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "required": [
+          "PageNumber",
+          "PageSize"
+        ],
+        "properties": {
+          "Filter": {
+            "type": "object",
+            "title": "筛选条件",
+            "description": "素材组筛选参数",
+            "properties": {
+              "GroupIds": {
+                "type": "array",
+                "title": "素材组ID列表",
+                "description": "指定需要查询的素材组ID集合",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "GroupType": {
+                "type": "string",
+                "title": "素材组类型",
+                "enum": [
+                  "AIGC"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "x-apifox-orders": [
+              "GroupIds",
+              "GroupType"
+            ],
+            "required": [
+              "GroupType"
+            ]
+          },
+          "PageNumber": {
+            "type": "integer",
+            "title": "页码",
+            "description": "分页页码，从1开始",
+            "minimum": 1
+          },
+          "PageSize": {
+            "type": "integer",
+            "title": "每页条数",
+            "description": "单页数据条数，最大支持100条",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "SortBy": {
+            "type": "string",
+            "title": "排序字段",
+            "description": "支持按创建时间、更新时间排序",
+            "enum": [
+              "CreateTime",
+              "UpdateTime"
+            ]
+          },
+          "SortOrder": {
+            "type": "string",
+            "title": "排序方式",
+            "description": "Asc 升序，Desc 降序",
+            "enum": [
+              "Asc",
+              "Desc"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "x-apifox-orders": [
+          "Filter",
+          "PageNumber",
+          "PageSize",
+          "SortBy",
+          "SortOrder"
+        ]
+      },
+      "example": {
+        "Filter": {
+          "GroupIds": [
+            "group-2026**********-*****"
+          ],
+          "GroupType": "AIGC"
+        },
+        "PageNumber": 1,
+        "PageSize": 10,
+        "SortBy": "CreateTime",
+        "SortOrder": "Desc"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463214320e0.md"
+    },
+    {
+      "doc_id": "463214374e0",
+      "title": "更新素材资产组合信息",
+      "summary": "更新素材资产组合信息",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/AIGC(虚拟人)素材管理/素材组",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": true,
+          "example": [
+            "UpdateAssetGroup"
+          ],
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "title": "更新素材资产组合请求体",
+        "description": "UpdateAssetGroup API 的请求参数",
+        "properties": {
+          "Id": {
+            "type": "string",
+            "title": "资产组合ID",
+            "description": "需要更新的素材资产组合（Asset Group）的唯一标识符，必选。"
+          },
+          "Description": {
+            "type": "string",
+            "title": "新资产组合描述",
+            "description": "需要更新的资产组合的新描述，上限为 300 字符。",
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "Id"
+        ],
+        "additionalProperties": false,
+        "x-apifox-orders": [
+          "Id",
+          "Description"
+        ]
+      },
+      "example": {
+        "Id": "group-2026**********-*****",
+        "Description": "new-description"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463214374e0.md"
+    },
+    {
+      "doc_id": "463214414e0",
+      "title": "创建素材资产组合",
+      "summary": "创建素材资产组合",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/AIGC(虚拟人)素材管理/素材组",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": true,
+          "example": "CreateAssetGroup",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "properties": {
+          "Description": {
+            "type": "string",
+            "title": "素材组描述",
+            "description": "Asset Group 描述，上限 300 字符",
+            "maxLength": 300
+          },
+          "GroupType": {
+            "type": "string",
+            "title": "素材组类型",
+            "enum": [
+              "AIGC"
+            ]
+          }
+        },
+        "required": [
+          "GroupType"
+        ],
+        "additionalProperties": false,
+        "x-apifox-orders": [
+          "GroupType",
+          "Description"
+        ]
+      },
+      "example": {
+        "GroupType": "AIGC",
+        "Description": "test"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463214414e0.md"
+    },
+    {
+      "doc_id": "463214538e0",
+      "title": "创建素材资产",
+      "summary": "创建素材资产",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/AIGC(虚拟人)素材管理/素材",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": true,
+          "example": "CreateAsset",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "required": [
+          "GroupId",
+          "URL",
+          "AssetType",
+          "Name "
+        ],
+        "properties": {
+          "GroupId": {
+            "type": "string",
+            "title": "素材组ID",
+            "description": "Asset（素材资产）所属的 Asset Group（素材资产组合）的 Id。"
+          },
+          "Name ": {
+            "type": "string",
+            "title": "素材名称",
+            "description": "Asset（素材资产）的名称，上限为 64 个字符。"
+          },
+          "URL": {
+            "type": "string",
+            "format": "uri",
+            "title": "素材URL",
+            "description": "传入的 Asset（素材资产）的公共可访问地址（URL）。"
+          },
+          "AssetType": {
+            "type": "string",
+            "title": "素材类型",
+            "description": "素材资产类型，必须传入指定枚举值",
+            "enum": [
+              "image",
+              "video",
+              "audio"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "x-apifox-orders": [
+          "GroupId",
+          "Name ",
+          "URL",
+          "AssetType"
+        ]
+      },
+      "example": {
+        "GroupId": "group-2026**********-*****",
+        "Name": "test",
+        "URL": "https://example.com/image.jpg",
+        "AssetType": "Image"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463214538e0.md"
+    },
+    {
+      "doc_id": "463215122e0",
+      "title": "查询素材资产列表",
+      "summary": "查询素材资产列表",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/AIGC(虚拟人)素材管理/素材",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": true,
+          "example": "ListAssets",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "properties": {
+          "Filter": {
+            "type": "object",
+            "properties": {
+              "GroupIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^group-.*$",
+                  "description": "资产组合ID，格式通常以 group- 开头"
+                },
+                "description": "素材所属的一个或多个资产组合ID列表"
+              },
+              "GroupType": {
+                "type": "string",
+                "description": "素材组类型",
+                "enum": [
+                  "AIGC"
+                ]
+              },
+              "Statuses": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "Active",
+                    "Processing",
+                    "Failed"
+                  ]
+                },
+                "description": "素材的状态列表"
+              }
+            },
+            "additionalProperties": false,
+            "description": "过滤条件",
+            "x-apifox-orders": [
+              "GroupIds",
+              "Statuses",
+              "GroupType"
+            ],
+            "required": [
+              "GroupType"
+            ]
+          },
+          "PageNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "页码，从1开始（必填）"
+          },
+          "PageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "每页返回的素材数量，最大100（必填）"
+          },
+          "SortBy": {
+            "type": "string",
+            "enum": [
+              "CreateTime",
+              "UpdateTime",
+              "GroupId"
+            ],
+            "description": "排序字段，默认为 CreateTime"
+          },
+          "SortOrder": {
+            "type": "string",
+            "enum": [
+              "Desc",
+              "Asc"
+            ],
+            "description": "排序顺序，默认为 Desc"
+          }
+        },
+        "required": [
+          "PageNumber",
+          "PageSize"
+        ],
+        "additionalProperties": false,
+        "x-apifox-orders": [
+          "Filter",
+          "PageNumber",
+          "PageSize",
+          "SortBy",
+          "SortOrder"
+        ]
+      },
+      "example": {
+        "Filter": {
+          "GroupIds": [
+            "group-2026**********-*****"
+          ],
+          "Statuses": [
+            "Active"
+          ],
+          "GroupType": "AIGC"
+        },
+        "PageNumber": 1,
+        "PageSize": 10,
+        "SortBy": "CreateTime",
+        "SortOrder": "Desc"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463215122e0.md"
+    },
+    {
+      "doc_id": "463215145e0",
+      "title": "更新素材资产信息",
+      "summary": "更新素材资产信息",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/AIGC(虚拟人)素材管理/素材",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": true,
+          "example": "UpdateAsset",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "title": "更新素材资产请求体",
+        "description": "UpdateAsset API 的请求参数，用于更新指定素材资产的信息",
+        "properties": {
+          "Id": {
+            "type": "string",
+            "title": "素材ID",
+            "description": "需要更新的素材资产（Asset）的唯一标识符",
+            "examples": [
+              "Asset-2026**********-*****"
+            ]
+          },
+          "Name": {
+            "type": "string",
+            "title": "新素材名称",
+            "description": "需要更新的素材资产的新名称，上限为 64 个字符",
+            "maxLength": 64,
+            "examples": [
+              "new-name"
+            ]
+          }
+        },
+        "required": [
+          "Id"
+        ],
+        "additionalProperties": false,
+        "x-apifox-orders": [
+          "Id",
+          "Name"
+        ]
+      },
+      "example": {
+        "Id": "Asset-2026**********-*****",
+        "Name": "new-name"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463215145e0.md"
+    },
+    {
+      "doc_id": "463612942e0",
+      "title": "拉起真人认证H5",
+      "summary": "拉起真人认证H5",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/LivenessFace(真人认证)素材管理",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": true,
+          "example": "CreateVisualValidateSession",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "title": "CreateVisualValidateSession 请求体",
+        "description": "发起真人认证请求，用于生成 H5 认证页链接",
+        "properties": {
+          "CallbackURL": {
+            "type": "string",
+            "title": "回调地址",
+            "description": "必选。认证结束后跳转的公网可访问 URL。",
+            "format": "uri",
+            "examples": [
+              "https://www.example.com/callback"
+            ]
+          },
+          "lng": {
+            "type": "string",
+            "title": "页面语言",
+            "description": "可选。目前支持简体中文 zh 、英文 en 和繁体 zh-Hant ，默认值为 en。",
+            "enum": [
+              "zh",
+              "en",
+              "zh-Hant"
+            ],
+            "default": "en"
+          },
+          "Description": {
+            "type": "string",
+            "title": "素材组描述",
+            "description": "可选。上限为 300 字符。"
+          }
+        },
+        "required": [
+          "CallbackURL"
+        ],
+        "additionalProperties": false,
+        "x-apifox-orders": [
+          "CallbackURL",
+          "lng",
+          "Description"
+        ]
+      },
+      "example": {
+        "CallbackURL": "https://www.example.com/callback",
+        "lng": "zh",
+        "Description": "test"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463612942e0.md"
+    },
+    {
+      "doc_id": "463622230e0",
+      "title": "获取真人 Asset Group ID",
+      "summary": "获取真人 Asset Group ID",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/LivenessFace(真人认证)素材管理",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": true,
+          "example": "GetVisualValidateResult",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "title": "GetVisualValidateResult 请求体",
+        "description": "查询真人认证会话对应的 Asset Group ID",
+        "properties": {
+          "BytedToken": {
+            "type": "string",
+            "title": "认证凭证",
+            "description": "本次认证的唯一凭证标识，从 CreateVisualValidateSession 返回体中获取",
+            "examples": [
+              "202603311449168C23BA26**************"
+            ]
+          }
+        },
+        "required": [
+          "BytedToken"
+        ],
+        "additionalProperties": false,
+        "x-apifox-orders": [
+          "BytedToken"
+        ]
+      },
+      "example": {
+        "BytedToken": "202603311449168C23BA26**************"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463622230e0.md"
+    },
+    {
+      "doc_id": "463628130e0",
+      "title": "查询真人素材资产组列表",
+      "summary": "查询真人素材资产组列表",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/LivenessFace(真人认证)素材管理/真人素材组",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": true,
+          "example": [
+            "ListAssetGroups"
+          ],
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "required": [
+          "PageNumber",
+          "PageSize"
+        ],
+        "properties": {
+          "Filter": {
+            "type": "object",
+            "title": "筛选条件",
+            "description": "素材组筛选参数",
+            "properties": {
+              "GroupIds": {
+                "type": "array",
+                "title": "素材组ID列表",
+                "description": "指定需要查询的素材组ID集合",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "GroupType": {
+                "type": "string",
+                "title": "素材组类型",
+                "enum": [
+                  "LivenessFace"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "x-apifox-orders": [
+              "GroupIds",
+              "GroupType"
+            ],
+            "required": [
+              "GroupType"
+            ]
+          },
+          "PageNumber": {
+            "type": "integer",
+            "title": "页码",
+            "description": "分页页码，从1开始",
+            "minimum": 1
+          },
+          "PageSize": {
+            "type": "integer",
+            "title": "每页条数",
+            "description": "单页数据条数，最大支持100条",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "SortBy": {
+            "type": "string",
+            "title": "排序字段",
+            "description": "支持按创建时间、更新时间排序",
+            "enum": [
+              "CreateTime",
+              "UpdateTime"
+            ]
+          },
+          "SortOrder": {
+            "type": "string",
+            "title": "排序方式",
+            "description": "Asc 升序，Desc 降序",
+            "enum": [
+              "Asc",
+              "Desc"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "x-apifox-orders": [
+          "Filter",
+          "PageNumber",
+          "PageSize",
+          "SortBy",
+          "SortOrder"
+        ]
+      },
+      "example": {
+        "Filter": {
+          "GroupIds": [
+            "group-2026**********-*****"
+          ],
+          "GroupType": "LivenessFace"
+        },
+        "PageNumber": 1,
+        "PageSize": 10,
+        "SortBy": "UpdateTime",
+        "SortOrder": "Desc"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463628130e0.md"
+    },
+    {
+      "doc_id": "463628131e0",
+      "title": "查询真人素材资产组信息",
+      "summary": "查询真人素材资产组信息",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/LivenessFace(真人认证)素材管理/真人素材组",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": true,
+          "example": [
+            "GetAssetGroup"
+          ],
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "title": "查询素材资产组合请求体",
+        "description": "GetAssetGroup API 的请求参数，用于查询指定素材资产组合的详细信息",
+        "properties": {
+          "Id": {
+            "type": "string",
+            "title": "资产组合ID",
+            "description": "需要查询的素材资产组合（Asset Group）的唯一标识符",
+            "examples": [
+              "group-2026**********-*****"
+            ]
+          }
+        },
+        "required": [
+          "Id"
+        ],
+        "additionalProperties": false,
+        "x-apifox-orders": [
+          "Id"
+        ]
+      },
+      "example": {
+        "Id": "group-2026**********-*****"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463628131e0.md"
+    },
+    {
+      "doc_id": "463628134e0",
+      "title": "更新真人素材资产组",
+      "summary": "更新真人素材资产组",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/LivenessFace(真人认证)素材管理/真人素材组",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": true,
+          "example": [
+            "UpdateAssetGroup"
+          ],
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "title": "更新素材资产组合请求体",
+        "description": "UpdateAssetGroup API 的请求参数",
+        "properties": {
+          "Id": {
+            "type": "string",
+            "title": "资产组合ID",
+            "description": "需要更新的素材资产组合（Asset Group）的唯一标识符，必选。"
+          },
+          "Description": {
+            "type": "string",
+            "title": "新资产组合描述",
+            "description": "需要更新的资产组合的新描述，上限为 300 字符。",
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "Id"
+        ],
+        "additionalProperties": false,
+        "x-apifox-orders": [
+          "Id",
+          "Description"
+        ]
+      },
+      "example": {
+        "Id": "group-2026**********-*****",
+        "Description": "new-description"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463628134e0.md"
+    },
+    {
+      "doc_id": "463629028e0",
+      "title": "查询真人素材资产列表",
+      "summary": "查询真人素材资产列表",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/LivenessFace(真人认证)素材管理/真人素材",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": true,
+          "example": "ListAssets",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "properties": {
+          "Filter": {
+            "type": "object",
+            "properties": {
+              "GroupIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^group-.*$",
+                  "description": "资产组合ID，格式通常以 group- 开头"
+                },
+                "description": "素材所属的一个或多个资产组合ID列表"
+              },
+              "GroupType": {
+                "type": "string",
+                "description": "素材组类型",
+                "enum": [
+                  "LivenessFace"
+                ]
+              },
+              "Statuses": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "Active",
+                    "Processing",
+                    "Failed"
+                  ]
+                },
+                "description": "素材的状态列表"
+              }
+            },
+            "additionalProperties": false,
+            "description": "过滤条件",
+            "x-apifox-orders": [
+              "GroupIds",
+              "Statuses",
+              "GroupType"
+            ],
+            "required": [
+              "GroupType"
+            ]
+          },
+          "PageNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "页码，从1开始（必填）"
+          },
+          "PageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "每页返回的素材数量，最大100（必填）"
+          },
+          "SortBy": {
+            "type": "string",
+            "enum": [
+              "CreateTime",
+              "UpdateTime",
+              "GroupId"
+            ],
+            "description": "排序字段，默认为 CreateTime"
+          },
+          "SortOrder": {
+            "type": "string",
+            "enum": [
+              "Desc",
+              "Asc"
+            ],
+            "description": "排序顺序，默认为 Desc"
+          }
+        },
+        "required": [
+          "PageNumber",
+          "PageSize"
+        ],
+        "additionalProperties": false,
+        "x-apifox-orders": [
+          "Filter",
+          "PageNumber",
+          "PageSize",
+          "SortBy",
+          "SortOrder"
+        ]
+      },
+      "example": {
+        "Filter": {
+          "GroupIds": [
+            "group-2026**********-*****"
+          ],
+          "Statuses": [
+            "Active"
+          ],
+          "GroupType": "LivenessFace"
+        },
+        "PageNumber": 1,
+        "PageSize": 10,
+        "SortBy": "CreateTime",
+        "SortOrder": "Desc"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463629028e0.md"
+    },
+    {
+      "doc_id": "463629029e0",
+      "title": "查询真人素材资产信息",
+      "summary": "查询真人素材资产信息",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/LivenessFace(真人认证)素材管理/真人素材",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": true,
+          "example": "GetAsset",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "properties": {
+          "Id": {
+            "type": "string",
+            "title": "素材ID",
+            "description": "Asset（素材资产）的 Id。"
+          }
+        },
+        "x-apifox-orders": [
+          "Id"
+        ],
+        "required": [
+          "Id"
+        ]
+      },
+      "example": {
+        "Id": "Asset-xxxx"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463629029e0.md"
+    },
+    {
+      "doc_id": "463629030e0",
+      "title": "更新真人素材资产信息",
+      "summary": "更新真人素材资产信息",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/LivenessFace(真人认证)素材管理/真人素材",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": true,
+          "example": "UpdateAsset",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "title": "更新素材资产请求体",
+        "description": "UpdateAsset API 的请求参数，用于更新指定素材资产的信息",
+        "properties": {
+          "Id": {
+            "type": "string",
+            "title": "素材ID",
+            "description": "需要更新的素材资产（Asset）的唯一标识符",
+            "examples": [
+              "Asset-2026**********-*****"
+            ]
+          },
+          "Name": {
+            "type": "string",
+            "title": "新素材名称",
+            "description": "需要更新的素材资产的新名称，上限为 64 个字符",
+            "maxLength": 64,
+            "examples": [
+              "new-name"
+            ]
+          }
+        },
+        "required": [
+          "Id"
+        ],
+        "additionalProperties": false,
+        "x-apifox-orders": [
+          "Id",
+          "Name"
+        ]
+      },
+      "example": {
+        "Id": "Asset-2026**********-*****",
+        "Name": "new-name"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463629030e0.md"
+    },
+    {
+      "doc_id": "463645855e0",
+      "title": "创建真人素材资产",
+      "summary": "创建真人素材资产",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/LivenessFace(真人认证)素材管理/真人素材",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": true,
+          "example": "CreateAsset",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "required": [
+          "GroupId",
+          "URL",
+          "AssetType",
+          "Name "
+        ],
+        "properties": {
+          "GroupId": {
+            "type": "string",
+            "title": "素材组ID",
+            "description": "Asset（素材资产）所属的 Asset Group（素材资产组合）的 Id。"
+          },
+          "Name ": {
+            "type": "string",
+            "title": "素材名称",
+            "description": "Asset（素材资产）的名称，上限为 64 个字符。"
+          },
+          "URL": {
+            "type": "string",
+            "format": "uri",
+            "title": "素材URL",
+            "description": "传入的 Asset（素材资产）的公共可访问地址（URL）。"
+          },
+          "AssetType": {
+            "type": "string",
+            "title": "素材类型",
+            "description": "素材资产类型，必须传入指定枚举值",
+            "enum": [
+              "image",
+              "video",
+              "audio"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "x-apifox-orders": [
+          "GroupId",
+          "Name ",
+          "URL",
+          "AssetType"
+        ]
+      },
+      "example": {
+        "GroupId": "group-2026**********-*****",
+        "Name": "test",
+        "URL": "https://example.com/image.jpg",
+        "AssetType": "Image"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463645855e0.md"
+    },
+    {
+      "doc_id": "463696924e0",
+      "title": "删除素材资产组",
+      "summary": "删除素材资产组",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/删除资产管理",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": false,
+          "example": "DeleteAssetGroup",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "properties": {
+          "Id": {
+            "type": "string",
+            "description": "需删除的素材资产组 ID。",
+            "title": "素材资产组ID"
+          }
+        },
+        "x-apifox-orders": [
+          "Id"
+        ],
+        "required": [
+          "Id"
+        ]
+      },
+      "example": {
+        "Id": "group-2026**********-*****"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463696924e0.md"
+    },
+    {
+      "doc_id": "463697822e0",
+      "title": "删除素材资产",
+      "summary": "删除素材资产",
+      "folder": "各模型API详细接口/ Dreamina-Seedance 2.0 系列/素材库管理/删除资产管理",
+      "method": "POST",
+      "path": "/materials",
+      "server": "https://vg-api.aig-ai.com",
+      "parameters": [
+        {
+          "name": "Action",
+          "in": "query",
+          "description": "",
+          "required": false,
+          "example": "DeleteAsset",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "content_type": "application/json",
+      "body_schema": {
+        "type": "object",
+        "properties": {
+          "Id": {
+            "type": "string",
+            "description": "需要删除的 Asset（素材资产）的 Id。",
+            "title": "素材资产ID"
+          }
+        },
+        "x-apifox-orders": [
+          "Id"
+        ],
+        "required": [
+          "Id"
+        ]
+      },
+      "example": {
+        "Id": "Asset-2026**********-*****"
+      },
+      "doc_url": "https://video-ai.apifox.cn/463697822e0.md"
+    }
+  ]
+}

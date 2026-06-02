@@ -1,0 +1,28 @@
+[project]
+name = "littleorange-video-mcp"
+version = "0.1.0"
+description = "MCP server for LittleOrange video model APIs"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "mcp[cli]>=1.6.0",
+  "httpx>=0.28.1",
+  "jsonschema>=4.23.0",
+]
+
+[project.scripts]
+video-ai-mcp = "video_ai_mcp.server:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "pytest-asyncio>=0.23.0"]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-data]
+video_ai_mcp = ["api_catalog.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
