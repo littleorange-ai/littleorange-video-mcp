@@ -119,6 +119,75 @@ def operation_by_tool_name(catalog: Catalog, tool_name: str) -> Operation:
     raise KeyError(f"Unknown tool: {tool_name}")
 
 
+def _dreamina_create_body_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    """Loosen Apifox's Dreamina schema to match its own examples and API behavior.
+
+    The upstream OpenAPI marks `role`, `resolution`, `generate_audio`, and
+    `return_last_frame` as required even though the official examples omit them.
+    More importantly, forcing `role` on `type: text` causes clients to send a
+    role in text content, and the API rejects that with "role is not supported
+    in text content".
+    """
+    fixed = copy.deepcopy(schema)
+    fixed["required"] = ["model", "content"]
+    fixed.setdefault("description", "Dreamina-Seedance 2.0 创建视频请求体；文本 content 不要带 role，媒体 content 才使用 role。")
+
+    content = (fixed.get("properties") or {}).get("content")
+    if isinstance(content, dict):
+        media_role = {
+            "type": "string",
+            "description": "仅媒体内容使用：reference_image、first_frame、last_frame、reference_video、reference_audio。文本内容不要传 role。",
+            "enum": ["reference_image", "first_frame", "last_frame", "reference_video", "reference_audio"],
+        }
+        url_object = lambda desc: {
+            "type": "object",
+            "properties": {"url": {"type": "string", "description": desc}},
+            "required": ["url"],
+        }
+        content["items"] = {
+            "type": "object",
+            "description": "多模态内容项。type=text 时只传 text，不传 role；图片/视频/音频可传对应 url 与 role。",
+            "oneOf": [
+                {
+                    "properties": {
+                        "type": {"const": "text", "description": "文本提示词"},
+                        "text": {"type": "string", "description": "文本提示词，中文≤500字，英文≤1000词"},
+                    },
+                    "required": ["type", "text"],
+                    "additionalProperties": False,
+                },
+                {
+                    "properties": {
+                        "type": {"const": "image_url", "description": "图片输入"},
+                        "image_url": url_object("支持公网URL、Base64、素材ID；格式jpeg/png/webp等，单图小于30MB"),
+                        "role": media_role,
+                    },
+                    "required": ["type", "image_url"],
+                    "additionalProperties": False,
+                },
+                {
+                    "properties": {
+                        "type": {"const": "video_url", "description": "视频输入"},
+                        "video_url": url_object("支持公网URL、素材ID；格式mp4/mov，分辨率480p~1080p，单视频小于50MB"),
+                        "role": media_role,
+                    },
+                    "required": ["type", "video_url"],
+                    "additionalProperties": False,
+                },
+                {
+                    "properties": {
+                        "type": {"const": "audio_url", "description": "音频输入"},
+                        "audio_url": url_object("支持公网URL、Base64、素材ID；格式wav/mp3，单音频小于15MB"),
+                        "role": media_role,
+                    },
+                    "required": ["type", "audio_url"],
+                    "additionalProperties": False,
+                },
+            ],
+        }
+    return fixed
+
+
 def build_tool_schema(operation: Operation) -> dict[str, Any]:
     properties: dict[str, Any] = {
         "api_key": {
@@ -135,7 +204,10 @@ def build_tool_schema(operation: Operation) -> dict[str, Any]:
             required.append(name)
 
     if operation.body_schema:
-        properties["request_body"] = _sanitize_json_schema(operation.body_schema)
+        body_schema = _sanitize_json_schema(operation.body_schema)
+        if operation.doc_id == "436902105e0":
+            body_schema = _dreamina_create_body_schema(body_schema)
+        properties["request_body"] = body_schema
         if operation.body_schema.get("required"):
             properties["request_body"].setdefault(
                 "description",

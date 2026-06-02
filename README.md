@@ -13,7 +13,7 @@ LittleOrange 视频模型 API 的 MCP Server，基于 https://video-ai.apifox.cn
 - Dreamina Seedance 2.0：视频生成、查询任务
 - Dreamina 素材库：AIGC 素材/素材组 CRUD、真人认证素材/素材组 CRUD、真人认证 H5、认证结果查询、删除资产/资产组
 
-所有工具的 `request_body` schema 来自 Apifox OpenAPI 文档，保留文档内全部参数、必填项、枚举、嵌套对象和数组结构。
+所有工具的 `request_body` schema 主要来自 Apifox OpenAPI 文档，保留文档内全部参数、枚举、嵌套对象和数组结构。少数文档 schema 与官方示例/真实接口行为不一致时，MCP 会做兼容修正；例如 Dreamina-Seedance 2.0 文本 content 不应携带 `role`，媒体 content 才使用 `role`。
 
 ## 推荐使用：uvx
 
@@ -43,7 +43,7 @@ LittleOrange 视频模型 API 的 MCP Server，基于 https://video-ai.apifox.cn
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/littleorange-ai/littleorange-video-mcp.git@v0.0.1",
+        "git+https://github.com/littleorange-ai/littleorange-video-mcp.git@v0.0.1-rolo",
         "littleorange-video-mcp"
       ],
       "env": {

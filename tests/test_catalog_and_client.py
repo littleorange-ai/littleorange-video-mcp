@@ -58,6 +58,58 @@ class CatalogAndClientTests(unittest.TestCase):
         self.assertIsNone(req.json_body)
         self.assertEqual(req.form_data["input_reference"], "file-or-url")
 
+    def test_dreamina_schema_accepts_official_examples_without_role_on_text(self):
+        catalog = load_catalog()
+        op = operation_by_tool_name(catalog, "dreamina_create_video")
+        schema = build_tool_schema(op)
+        body_schema = schema["properties"]["request_body"]
+        self.assertEqual(body_schema["required"], ["model", "content"])
+        content_item_schema = body_schema["properties"]["content"]["items"]
+        self.assertEqual(content_item_schema["oneOf"][0]["required"], ["type", "text"])
+        self.assertNotIn("role", content_item_schema["oneOf"][0]["properties"])
+
+        official_example = {
+            "model": "dreamina-seedance-2-0",
+            "content": [
+                {"type": "text", "text": "写实风格，晴朗的蓝天之下，一大片白色的雏菊花田。"},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "https://example.com/ref.png"},
+                    "role": "reference_image",
+                },
+            ],
+            "ratio": "16:9",
+            "duration": 5,
+            "watermark": False,
+        }
+        req = build_request(
+            op,
+            {"api_key": "sk-test", "model_id": "dreamina-seedance-2-0", "request_body": official_example},
+        )
+        self.assertEqual(req.json_body, official_example)
+        self.assertNotIn("role", req.json_body["content"][0])
+
+    def test_dreamina_request_normalizes_erroneous_text_role(self):
+        catalog = load_catalog()
+        op = operation_by_tool_name(catalog, "dreamina_create_video")
+        payload = {
+            "model": "dreamina-seedance-2-0",
+            "content": [
+                {"type": "text", "text": "提示词", "role": "reference_image"},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "https://example.com/ref.png"},
+                    "role": "first_frame",
+                },
+            ],
+        }
+        req = build_request(
+            op,
+            {"api_key": "sk-test", "model_id": "dreamina-seedance-2-0", "request_body": payload},
+        )
+        self.assertNotIn("role", req.json_body["content"][0])
+        self.assertEqual(req.json_body["content"][1]["role"], "first_frame")
+
     def test_create_response_task_id_and_query_mapping_for_auto_poll(self):
         self.assertEqual(extract_task_id({"task_id": "vidu-task"}), "vidu-task")
         self.assertEqual(extract_task_id({"id": "dreamina-task"}), "dreamina-task")

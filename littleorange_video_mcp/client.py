@@ -68,14 +68,32 @@ def validate_arguments(operation: Operation, arguments: dict[str, Any]) -> None:
     jsonschema.validate(instance=arguments, schema=schema)
 
 
+def _normalize_request_body(operation: Operation, body: Any) -> Any:
+    if operation.doc_id != "436902105e0" or not isinstance(body, dict):
+        return body
+    normalized = dict(body)
+    content = normalized.get("content")
+    if isinstance(content, list):
+        normalized_content: list[Any] = []
+        for item in content:
+            if isinstance(item, dict) and item.get("type") == "text" and "role" in item:
+                item = dict(item)
+                item.pop("role", None)
+            normalized_content.append(item)
+        normalized["content"] = normalized_content
+    return normalized
+
+
 def build_request(operation: Operation, arguments: dict[str, Any]) -> PreparedRequest:
-    validate_arguments(operation, arguments)
-    path = _substitute_path(operation.path, arguments)
+    normalized_arguments = dict(arguments)
+    normalized_arguments["request_body"] = _normalize_request_body(operation, arguments.get("request_body"))
+    validate_arguments(operation, normalized_arguments)
+    path = _substitute_path(operation.path, normalized_arguments)
     url = operation.server.rstrip("/") + path
     content_type = operation.content_type
-    headers = {"Authorization": f"Bearer {_api_key(arguments)}"}
-    params = _query_params(operation, arguments)
-    body = arguments.get("request_body")
+    headers = {"Authorization": f"Bearer {_api_key(normalized_arguments)}"}
+    params = _query_params(operation, normalized_arguments)
+    body = normalized_arguments.get("request_body")
 
     json_body = None
     form_data = None
