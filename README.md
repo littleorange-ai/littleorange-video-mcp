@@ -43,7 +43,7 @@ LittleOrange 视频模型 API 的 MCP Server，基于 https://video-ai.apifox.cn
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/littleorange-ai/littleorange-video-mcp.git@v0.0.1-rolo",
+        "git+https://github.com/littleorange-ai/littleorange-video-mcp.git@0.0.1.post2",
         "littleorange-video-mcp"
       ],
       "env": {

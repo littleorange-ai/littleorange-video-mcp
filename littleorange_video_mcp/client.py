@@ -86,7 +86,10 @@ def _normalize_request_body(operation: Operation, body: Any) -> Any:
 
 def build_request(operation: Operation, arguments: dict[str, Any]) -> PreparedRequest:
     normalized_arguments = dict(arguments)
-    normalized_arguments["request_body"] = _normalize_request_body(operation, arguments.get("request_body"))
+    if operation.body_schema is not None:
+        normalized_arguments["request_body"] = _normalize_request_body(operation, arguments.get("request_body"))
+    elif normalized_arguments.get("request_body") is None:
+        normalized_arguments.pop("request_body", None)
     validate_arguments(operation, normalized_arguments)
     path = _substitute_path(operation.path, normalized_arguments)
     url = operation.server.rstrip("/") + path

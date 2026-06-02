@@ -175,6 +175,7 @@ async def _raw_request(arguments: dict[str, Any]) -> list[TextContent]:
     from .client import call_operation
 
     path = arguments["path"]
+    request_body = arguments.get("request_body")
     op = Operation(
         doc_id="raw",
         title="raw",
@@ -188,13 +189,18 @@ async def _raw_request(arguments: dict[str, Any]) -> list[TextContent]:
             {"name": "id", "in": "path", "required": "{id}" in path, "schema": {"type": "string"}},
             {"name": "Action", "in": "query", "required": False, "schema": {"type": "string"}},
         ],
-        content_type="application/json" if arguments.get("request_body") is not None else None,
-        body_schema={"type": "object", "additionalProperties": True} if arguments.get("request_body") is not None else None,
+        content_type="application/json" if request_body is not None else None,
+        body_schema={"type": "object", "additionalProperties": True} if request_body is not None else None,
         example=None,
         doc_url="https://video-ai.apifox.cn",
         tool_name="littleorange_raw_request",
     )
-    result = await call_operation(op, arguments)
+    call_arguments = {
+        key: value
+        for key, value in arguments.items()
+        if key in {"api_key", "model_id", "id", "Action", "request_body"} and value is not None
+    }
+    result = await call_operation(op, call_arguments)
     return [TextContent(type="text", text=to_json_text(result))]
 
 

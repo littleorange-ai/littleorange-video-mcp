@@ -58,6 +58,21 @@ class CatalogAndClientTests(unittest.TestCase):
         self.assertIsNone(req.json_body)
         self.assertEqual(req.form_data["input_reference"], "file-or-url")
 
+    def test_query_tools_ignore_spurious_null_request_body(self):
+        catalog = load_catalog()
+        op = operation_by_tool_name(catalog, "dreamina_query_video")
+        req = build_request(
+            op,
+            {
+                "api_key": "sk-test",
+                "model_id": "dreamina-seedance-2-0",
+                "id": "cgt-20260602175224-5vnnd",
+                "request_body": None,
+            },
+        )
+        self.assertEqual(req.url, "https://vg-api.aig-ai.com/v1/query/dreamina-seedance-2-0/cgt-20260602175224-5vnnd")
+        self.assertIsNone(req.json_body)
+
     def test_dreamina_schema_accepts_official_examples_without_role_on_text(self):
         catalog = load_catalog()
         op = operation_by_tool_name(catalog, "dreamina_create_video")
