@@ -11,7 +11,7 @@ import jsonschema
 from .catalog import Operation, build_tool_schema
 
 
-class VideoAIRequestError(RuntimeError):
+class LittleOrangeRequestError(RuntimeError):
     pass
 
 
@@ -27,9 +27,9 @@ class PreparedRequest:
 
 
 def _api_key(arguments: dict[str, Any]) -> str:
-    key = arguments.get("api_key") or os.getenv("VIDEO_AI_API_KEY")
+    key = arguments.get("api_key") or os.getenv("LITTLEORANGE_API_KEY")
     if not key:
-        raise VideoAIRequestError("缺少 API Key：请传入 api_key 或设置 VIDEO_AI_API_KEY 环境变量。")
+        raise LittleOrangeRequestError("缺少 API Key：请传入 api_key 或设置 LITTLEORANGE_API_KEY 环境变量。")
     if key.startswith("Bearer "):
         key = key.removeprefix("Bearer ").strip()
     return key
@@ -39,7 +39,7 @@ def _substitute_path(path: str, arguments: dict[str, Any]) -> str:
     def repl(match: re.Match[str]) -> str:
         name = match.group(1)
         if name not in arguments or arguments[name] in (None, ""):
-            raise VideoAIRequestError(f"缺少路径参数: {name}")
+            raise LittleOrangeRequestError(f"缺少路径参数: {name}")
         return str(arguments[name])
 
     return re.sub(r"\{([^}]+)\}", repl, path)
@@ -59,7 +59,7 @@ def _query_params(operation: Operation, arguments: dict[str, Any]) -> dict[str, 
                 value = value[0]
             params[name] = value
         elif param.get("required"):
-            raise VideoAIRequestError(f"缺少查询参数: {name}")
+            raise LittleOrangeRequestError(f"缺少查询参数: {name}")
     return params
 
 
@@ -101,7 +101,7 @@ async def call_operation(operation: Operation, arguments: dict[str, Any]) -> dic
     import httpx
 
     request = build_request(operation, arguments)
-    timeout = float(os.getenv("VIDEO_AI_TIMEOUT", "120"))
+    timeout = float(os.getenv("LITTLEORANGE_TIMEOUT", "120"))
     async with httpx.AsyncClient(timeout=timeout) as client:
         try:
             if request.form_data is not None:
@@ -123,9 +123,9 @@ async def call_operation(operation: Operation, arguments: dict[str, Any]) -> dic
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             text = exc.response.text[:4000]
-            raise VideoAIRequestError(f"HTTP {exc.response.status_code}: {text}") from exc
+            raise LittleOrangeRequestError(f"HTTP {exc.response.status_code}: {text}") from exc
         except httpx.HTTPError as exc:
-            raise VideoAIRequestError(f"请求失败: {exc}") from exc
+            raise LittleOrangeRequestError(f"请求失败: {exc}") from exc
 
     content_type = response.headers.get("content-type", "")
     if "application/json" in content_type:

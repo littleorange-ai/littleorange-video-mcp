@@ -15,9 +15,9 @@ from .autopoll import (
     wait_tool_for_create_tool,
 )
 from .catalog import build_tool_schema, load_catalog, operation_by_tool_name, operation_description
-from .client import VideoAIRequestError, call_operation, to_json_text
+from .client import LittleOrangeRequestError, call_operation, to_json_text
 
-SERVER_NAME = "video-ai-mcp"
+SERVER_NAME = "littleorange-video-mcp"
 
 catalog = load_catalog()
 app = Server(SERVER_NAME)
@@ -86,10 +86,10 @@ async def list_tools() -> list[Tool]:
 
     tools.append(
         Tool(
-            name="video_ai_raw_request",
+            name="littleorange_raw_request",
             description=(
-                "原始透传调用工具，用于文档新增但 MCP 尚未封装的接口，或需要传递非标准请求体时使用。"
-                "支持 method/path/model_id/id/Action/request_body/api_key。默认 base_url 为 https://vg-api.aig-ai.com。"
+            "原始透传调用工具，用于文档新增但 MCP 尚未封装的接口，或需要传递非标准请求体时使用。"
+            "支持 method/path/model_id/id/Action/request_body/api_key。默认 base_url 为 https://vg-api.aig-ai.com。"
             ),
             inputSchema={
                 "type": "object",
@@ -101,7 +101,7 @@ async def list_tools() -> list[Tool]:
                     "id": {"type": "string"},
                     "Action": {"type": "string"},
                     "request_body": {"type": "object", "additionalProperties": True},
-                    "api_key": {"type": "string", "description": "可选；不传时使用 VIDEO_AI_API_KEY。"},
+                    "api_key": {"type": "string", "description": "可选；不传时使用 LITTLEORANGE_API_KEY。"},
                 },
                 "required": ["path"],
                 "additionalProperties": False,
@@ -115,14 +115,14 @@ async def list_tools() -> list[Tool]:
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     try:
         arguments = arguments or {}
-        if name == "video_ai_raw_request":
+        if name == "littleorange_raw_request":
             return await _raw_request(arguments)
         if name in AUTO_POLL_TOOL_NAMES:
             return await _create_and_wait(name, arguments)
         operation = operation_by_tool_name(catalog, name)
         result = await call_operation(operation, arguments)
         return [TextContent(type="text", text=to_json_text(result))]
-    except (KeyError, VideoAIRequestError, Exception) as exc:
+    except (KeyError, LittleOrangeRequestError, Exception) as exc:
         return [TextContent(type="text", text=f"调用失败: {exc}")]
 
 
@@ -192,7 +192,7 @@ async def _raw_request(arguments: dict[str, Any]) -> list[TextContent]:
         body_schema={"type": "object", "additionalProperties": True} if arguments.get("request_body") is not None else None,
         example=None,
         doc_url="https://video-ai.apifox.cn",
-        tool_name="video_ai_raw_request",
+        tool_name="littleorange_raw_request",
     )
     result = await call_operation(op, arguments)
     return [TextContent(type="text", text=to_json_text(result))]

@@ -102,7 +102,7 @@ def _sanitize_json_schema(schema: Any) -> Any:
 
 
 def load_catalog() -> Catalog:
-    with resources.files("video_ai_mcp").joinpath("api_catalog.json").open("r", encoding="utf-8") as f:
+    with resources.files("littleorange_video_mcp").joinpath("api_catalog.json").open("r", encoding="utf-8") as f:
         data = json.load(f)
     operations: list[Operation] = []
     for raw in data["operations"]:
@@ -123,7 +123,7 @@ def build_tool_schema(operation: Operation) -> dict[str, Any]:
     properties: dict[str, Any] = {
         "api_key": {
             "type": "string",
-            "description": "可选。LittleOrange 视频 API Key；不传时使用环境变量 VIDEO_AI_API_KEY。不要在对话中泄露真实密钥。",
+            "description": "可选。LittleOrange 视频 API Key；不传时使用环境变量 LITTLEORANGE_API_KEY。不要在对话中泄露真实密钥。",
         }
     }
     required: list[str] = []

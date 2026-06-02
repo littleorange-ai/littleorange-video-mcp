@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.venv/
+
+# Local secrets / auth helpers
+setup-github-token.sh
+setup-github-token.example.sh
+.env
+.pypirc

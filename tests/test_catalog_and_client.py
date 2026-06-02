@@ -1,8 +1,8 @@
 import unittest
 
-from video_ai_mcp.catalog import load_catalog, build_tool_schema, operation_by_tool_name
-from video_ai_mcp.client import build_request
-from video_ai_mcp.autopoll import (
+from littleorange_video_mcp.catalog import load_catalog, build_tool_schema, operation_by_tool_name
+from littleorange_video_mcp.client import build_request
+from littleorange_video_mcp.autopoll import (
     AUTO_POLL_TOOL_NAMES,
     extract_task_id,
     extract_video_urls,
@@ -24,7 +24,7 @@ class CatalogAndClientTests(unittest.TestCase):
 
     def test_all_tool_names_fit_trae_sixty_char_limit(self):
         catalog = load_catalog()
-        names = [op.tool_name for op in catalog.operations] + ["video_ai_raw_request", *AUTO_POLL_TOOL_NAMES]
+        names = [op.tool_name for op in catalog.operations] + ["littleorange_raw_request", *AUTO_POLL_TOOL_NAMES]
         too_long = [name for name in names if len(name) > 60]
         self.assertEqual(too_long, [])
 
