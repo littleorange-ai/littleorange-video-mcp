@@ -80,7 +80,7 @@ def _error_payload(error_type: str, message: str, details: dict[str, Any] | None
 
 
 @app.list_tools()
-async def list_tools() -> list[Tool]:
+async def list_tools(_request: Any | None = None) -> list[Tool]:
     tools: list[Tool] = []
     for operation in catalog.operations:
         description = operation_description(operation)
