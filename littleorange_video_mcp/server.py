@@ -8,14 +8,20 @@ from mcp.types import TextContent, Tool
 
 from .autopoll import (
     AUTO_POLL_TOOL_NAMES,
+    DEFAULT_FIRST_POLL_DELAY_SECONDS,
+    DEFAULT_MAX_POLL_ATTEMPTS,
+    DEFAULT_POLL_INTERVAL_SECONDS,
     create_tool_for_wait_tool,
+    configured_first_poll_delay_seconds,
+    configured_max_poll_attempts,
+    configured_poll_interval_seconds,
     extract_task_id,
     poll_until_complete,
     query_tool_for_create_tool,
-    wait_tool_for_create_tool,
 )
 from .catalog import build_tool_schema, load_catalog, operation_by_tool_name, operation_description
-from .client import LittleOrangeRequestError, call_operation, to_json_text
+from .client import DEFAULT_BASE_URL, LittleOrangeRequestError, call_operation, configured_base_url, to_json_text
+from .config import LittleOrangeConfigError
 
 SERVER_NAME = "littleorange-video-mcp"
 
@@ -30,16 +36,22 @@ def _wait_tool_schema(create_tool_name: str) -> dict[str, Any]:
         {
             "poll_interval_seconds": {
                 "type": "number",
-                "default": 5,
+                "default": DEFAULT_POLL_INTERVAL_SECONDS,
                 "minimum": 1,
-                "description": "轮询间隔秒数，默认 5 秒。",
+                "description": "轮询间隔秒数；未传时使用 LITTLEORANGE_POLL_INTERVAL_SECONDS，默认 5 秒。",
             },
             "max_poll_attempts": {
                 "type": "integer",
-                "default": 60,
+                "default": DEFAULT_MAX_POLL_ATTEMPTS,
                 "minimum": 1,
                 "maximum": 720,
-                "description": "最大轮询次数，默认 60 次。总等待时间约为 interval * attempts。",
+                "description": "最大轮询次数；未传时使用 LITTLEORANGE_MAX_POLL_ATTEMPTS，默认 60 次。总等待时间约为 interval * attempts。",
+            },
+            "first_poll_delay_seconds": {
+                "type": "number",
+                "default": DEFAULT_FIRST_POLL_DELAY_SECONDS,
+                "minimum": 0,
+                "description": "首次轮询前等待秒数；未传时使用 LITTLEORANGE_FIRST_POLL_DELAY_SECONDS，默认 2 秒。",
             },
         }
     )
@@ -55,21 +67,29 @@ def _wait_tool_description(wait_name: str, create_tool_name: str) -> str:
     create_op = operation_by_tool_name(catalog, create_tool_name)
     query_tool = query_tool_for_create_tool(create_tool_name)
     return (
-        f"创建任务并自动轮询到完成：先调用 {create_tool_name}，再用 {query_tool} 查询。\n"
+        f"创建任务并自动轮询到完成：先调用 {create_tool_name}，再用 {query_tool} 查询。优先用于最终要拿到视频 URL 的场景。\n"
         f"原始接口: {create_op.method} {create_op.path}\n"
-        "完成后返回 video_urls 数组和完整查询结果。TRAE/客户端如果支持 URL 预览，可直接展示或打开视频链接；"
-        "MCP stdio 本身不能强制客户端内嵌播放。"
+        "建议：如果只是启动任务可用 create 工具；如果希望单次调用直接返回最终视频链接，优先使用该 _wait 工具。\n"
+        "可调参数：base_url、poll_interval_seconds、max_poll_attempts、first_poll_delay_seconds。\n"
+        "完成后返回 video_urls、elapsed_seconds、last_status 等信息。生成会消耗 LittleOrange 付费/限额额度。"
     )
+
+
+def _error_payload(error_type: str, message: str, details: dict[str, Any] | None = None) -> list[TextContent]:
+    return [TextContent(type="text", text=to_json_text({"status": "error", "error_type": error_type, "message": message, "details": details or {}}))]
 
 
 @app.list_tools()
 async def list_tools() -> list[Tool]:
     tools: list[Tool] = []
     for operation in catalog.operations:
+        description = operation_description(operation)
+        if operation.tool_name in {"vidu_t2v", "vidu_i2v", "veo31_t2v", "dreamina_create_video"}:
+            description += "\n建议：需要直接等待结果时，优先使用对应的 _wait 工具。"
         tools.append(
             Tool(
                 name=operation.tool_name,
-                description=operation_description(operation),
+                description=description,
                 inputSchema=build_tool_schema(operation),
             )
         )
@@ -84,31 +104,168 @@ async def list_tools() -> list[Tool]:
             )
         )
 
-    tools.append(
-        Tool(
-            name="littleorange_raw_request",
-            description=(
-            "原始透传调用工具，用于文档新增但 MCP 尚未封装的接口，或需要传递非标准请求体时使用。"
-            "支持 method/path/model_id/id/Action/request_body/api_key。默认 base_url 为 https://vg-api.aig-ai.com。"
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "method": {"type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"], "default": "POST"},
-                    "base_url": {"type": "string", "default": "https://vg-api.aig-ai.com"},
-                    "path": {"type": "string", "description": "例如 /v1/{model_id} 或 /materials"},
-                    "model_id": {"type": "string"},
-                    "id": {"type": "string"},
-                    "Action": {"type": "string"},
-                    "request_body": {"type": "object", "additionalProperties": True},
-                    "api_key": {"type": "string", "description": "可选；不传时使用 LITTLEORANGE_API_KEY。"},
+    tools.extend(
+        [
+            Tool(
+                name="video_generate_wait",
+                description="高层视频生成工具：根据 mode=t2v/i2v 和 provider=vidu/veo31/sora2/dreamina 路由到对应 _wait 工具。适合 Agent 优先调用。",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "provider": {"type": "string", "enum": ["vidu", "veo31", "sora2", "dreamina"]},
+                        "mode": {"type": "string", "enum": ["t2v", "i2v", "extend"]},
+                        "base_url": {"type": "string"},
+                        "api_key": {"type": "string"},
+                        "model_id": {"type": "string"},
+                        "poll_interval_seconds": {"type": "number", "minimum": 1},
+                        "max_poll_attempts": {"type": "integer", "minimum": 1, "maximum": 720},
+                        "first_poll_delay_seconds": {"type": "number", "minimum": 0},
+                        "request_body": {"type": "object", "additionalProperties": True},
+                    },
+                    "required": ["provider", "mode", "request_body"],
+                    "additionalProperties": False,
                 },
-                "required": ["path"],
-                "additionalProperties": False,
-            },
-        )
+            ),
+            Tool(
+                name="image_to_video_wait",
+                description="高层图生视频工具：根据 provider 路由到 sora2_i2v_wait / veo31_i2v_wait / vidu_i2v_wait。",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "provider": {"type": "string", "enum": ["vidu", "veo31", "sora2"]},
+                        "base_url": {"type": "string"},
+                        "api_key": {"type": "string"},
+                        "model_id": {"type": "string"},
+                        "poll_interval_seconds": {"type": "number", "minimum": 1},
+                        "max_poll_attempts": {"type": "integer", "minimum": 1, "maximum": 720},
+                        "first_poll_delay_seconds": {"type": "number", "minimum": 0},
+                        "request_body": {"type": "object", "additionalProperties": True},
+                    },
+                    "required": ["provider", "request_body"],
+                    "additionalProperties": False,
+                },
+            ),
+            Tool(
+                name="video_extend_wait",
+                description="高层视频扩展工具：当前路由到 veo31_extend_wait。",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "provider": {"type": "string", "enum": ["veo31"]},
+                        "base_url": {"type": "string"},
+                        "api_key": {"type": "string"},
+                        "model_id": {"type": "string"},
+                        "poll_interval_seconds": {"type": "number", "minimum": 1},
+                        "max_poll_attempts": {"type": "integer", "minimum": 1, "maximum": 720},
+                        "first_poll_delay_seconds": {"type": "number", "minimum": 0},
+                        "request_body": {"type": "object", "additionalProperties": True},
+                    },
+                    "required": ["provider", "request_body"],
+                    "additionalProperties": False,
+                },
+            ),
+            Tool(
+                name="video_query",
+                description="高层视频任务查询工具：根据 provider 路由到对应 query 工具。适合已有任务 ID 的场景。",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "provider": {"type": "string", "enum": ["vidu", "veo31", "sora2", "dreamina"]},
+                        "base_url": {"type": "string"},
+                        "api_key": {"type": "string"},
+                        "model_id": {"type": "string"},
+                        "id": {"type": "string"},
+                    },
+                    "required": ["provider", "id"],
+                    "additionalProperties": False,
+                },
+            ),
+            Tool(
+                name="asset_upload",
+                description="高层素材上传工具：当前路由到 dreamina_aigc_create_asset。",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "base_url": {"type": "string"},
+                        "api_key": {"type": "string"},
+                        "request_body": {"type": "object", "additionalProperties": True},
+                        "Action": {"type": "string", "default": "CreateAsset"},
+                    },
+                    "required": ["request_body"],
+                    "additionalProperties": False,
+                },
+            ),
+            Tool(
+                name="asset_list",
+                description="高层素材列表工具：当前路由到 dreamina_aigc_list_assets。",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "base_url": {"type": "string"},
+                        "api_key": {"type": "string"},
+                        "Action": {"type": "string", "default": "ListAssets"},
+                        "request_body": {"type": "object", "additionalProperties": True},
+                    },
+                    "additionalProperties": False,
+                },
+            ),
+            Tool(
+                name="littleorange_raw_request",
+                description=(
+                "原始透传调用工具，用于文档新增但 MCP 尚未封装的接口，或需要传递非标准请求体时使用。"
+                "支持 method/path/model_id/id/Action/request_body/api_key/base_url/query_params/headers。默认读取 LITTLEORANGE_BASE_URL，未设置时为 https://vg-api.aig-ai.com。"
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "method": {"type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"], "default": "POST"},
+                        "base_url": {"type": "string", "default": DEFAULT_BASE_URL},
+                        "path": {"type": "string", "description": "例如 /v1/{model_id} 或 /materials"},
+                        "model_id": {"type": "string"},
+                        "id": {"type": "string"},
+                        "Action": {"type": "string"},
+                        "query_params": {"type": "object", "additionalProperties": True},
+                        "headers": {"type": "object", "additionalProperties": {"type": "string"}},
+                        "request_body": {},
+                        "api_key": {"type": "string", "description": "可选；不传时使用 LITTLEORANGE_API_KEY。"},
+                    },
+                    "required": ["path"],
+                    "additionalProperties": False,
+                },
+            ),
+        ]
     )
     return tools
+
+
+def _route_wait_tool(provider: str, mode: str) -> str:
+    mapping = {
+        ("vidu", "t2v"): "vidu_t2v_wait",
+        ("vidu", "i2v"): "vidu_i2v_wait",
+        ("veo31", "t2v"): "veo31_t2v_wait",
+        ("veo31", "i2v"): "veo31_i2v_wait",
+        ("veo31", "extend"): "veo31_extend_wait",
+        ("sora2", "t2v"): "sora2_t2v_wait",
+        ("sora2", "i2v"): "sora2_i2v_wait",
+        ("dreamina", "t2v"): "dreamina_create_video_wait",
+    }
+    try:
+        return mapping[(provider, mode)]
+    except KeyError as exc:
+        raise LittleOrangeRequestError(f"不支持的 provider/mode 组合: {provider}/{mode}") from exc
+
+
+def _route_query_tool(provider: str) -> str:
+    mapping = {
+        "vidu": "vidu_query",
+        "veo31": "veo31_query",
+        "sora2": "sora2_query",
+        "dreamina": "dreamina_query_video",
+    }
+    try:
+        return mapping[provider]
+    except KeyError as exc:
+        raise LittleOrangeRequestError(f"不支持的 provider: {provider}") from exc
 
 
 @app.call_tool()
@@ -117,13 +274,51 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         arguments = arguments or {}
         if name == "littleorange_raw_request":
             return await _raw_request(arguments)
+        if name == "video_generate_wait":
+            routed_name = _route_wait_tool(arguments["provider"], arguments["mode"])
+            routed_arguments = dict(arguments)
+            routed_arguments.pop("provider", None)
+            routed_arguments.pop("mode", None)
+            return await _create_and_wait(routed_name, routed_arguments)
+        if name == "image_to_video_wait":
+            routed_arguments = dict(arguments)
+            provider = routed_arguments.pop("provider")
+            return await _create_and_wait(_route_wait_tool(provider, "i2v"), routed_arguments)
+        if name == "video_extend_wait":
+            routed_arguments = dict(arguments)
+            routed_arguments.pop("provider", None)
+            return await _create_and_wait("veo31_extend_wait", routed_arguments)
+        if name == "video_query":
+            operation = operation_by_tool_name(catalog, _route_query_tool(arguments["provider"]))
+            routed_arguments = dict(arguments)
+            routed_arguments.pop("provider", None)
+            result = await call_operation(operation, routed_arguments)
+            return [TextContent(type="text", text=to_json_text(result))]
+        if name == "asset_upload":
+            operation = operation_by_tool_name(catalog, "dreamina_aigc_create_asset")
+            result = await call_operation(operation, arguments)
+            return [TextContent(type="text", text=to_json_text(result))]
+        if name == "asset_list":
+            operation = operation_by_tool_name(catalog, "dreamina_aigc_list_assets")
+            result = await call_operation(operation, arguments)
+            return [TextContent(type="text", text=to_json_text(result))]
         if name in AUTO_POLL_TOOL_NAMES:
             return await _create_and_wait(name, arguments)
         operation = operation_by_tool_name(catalog, name)
         result = await call_operation(operation, arguments)
         return [TextContent(type="text", text=to_json_text(result))]
-    except (KeyError, LittleOrangeRequestError, Exception) as exc:
-        return [TextContent(type="text", text=f"调用失败: {exc}")]
+    except LittleOrangeConfigError as exc:
+        return _error_payload("validation_error", str(exc))
+    except KeyError as exc:
+        return _error_payload("unknown_tool", str(exc))
+    except LittleOrangeRequestError as exc:
+        try:
+            payload = to_json_text(__import__("json").loads(str(exc)))
+            return [TextContent(type="text", text=payload)]
+        except Exception:
+            return _error_payload("request_error", str(exc))
+    except Exception as exc:
+        return _error_payload("unknown_error", str(exc))
 
 
 async def _create_and_wait(wait_tool_name: str, arguments: dict[str, Any]) -> list[TextContent]:
@@ -132,8 +327,9 @@ async def _create_and_wait(wait_tool_name: str, arguments: dict[str, Any]) -> li
     create_op = operation_by_tool_name(catalog, create_tool_name)
     query_op = operation_by_tool_name(catalog, query_tool_name)
 
-    poll_interval = float(arguments.pop("poll_interval_seconds", 5))
-    max_attempts = int(arguments.pop("max_poll_attempts", 60))
+    poll_interval = configured_poll_interval_seconds() if "poll_interval_seconds" not in arguments else arguments.pop("poll_interval_seconds")
+    max_attempts = configured_max_poll_attempts() if "max_poll_attempts" not in arguments else arguments.pop("max_poll_attempts")
+    first_poll_delay = configured_first_poll_delay_seconds() if "first_poll_delay_seconds" not in arguments else arguments.pop("first_poll_delay_seconds")
     create_result = await call_operation(create_op, arguments)
     task_id = extract_task_id(create_result)
     if not task_id:
@@ -150,12 +346,14 @@ async def _create_and_wait(wait_tool_name: str, arguments: dict[str, Any]) -> li
             )
         ]
 
-    query_args = {
-        "model_id": arguments.get("model_id"),
-        "id": task_id,
-    }
-    if arguments.get("api_key"):
-        query_args["api_key"] = arguments["api_key"]
+    query_args = {key: value for key, value in arguments.items() if key in {"base_url", "api_key", "model_id", "headers", "query_params"} and value is not None}
+    for param in query_op.parameters:
+        name = param["name"]
+        if name == "id":
+            query_args[name] = task_id
+        elif name in arguments and arguments[name] is not None:
+            query_args[name] = arguments[name]
+    query_args.setdefault("id", task_id)
 
     async def query_once() -> dict[str, Any]:
         return await call_operation(query_op, query_args)
@@ -165,12 +363,12 @@ async def _create_and_wait(wait_tool_name: str, arguments: dict[str, Any]) -> li
         query_once,
         max_attempts=max_attempts,
         interval_seconds=poll_interval,
+        first_poll_delay_seconds=first_poll_delay,
     )
     return [TextContent(type="text", text=to_json_text(result))]
 
 
 async def _raw_request(arguments: dict[str, Any]) -> list[TextContent]:
-    # Reuse the same request machinery by constructing a minimal Operation.
     from .catalog import Operation
     from .client import call_operation
 
@@ -183,14 +381,14 @@ async def _raw_request(arguments: dict[str, Any]) -> list[TextContent]:
         folder="raw",
         method=arguments.get("method", "POST"),
         path=path,
-        server=arguments.get("base_url", "https://vg-api.aig-ai.com"),
+        server=arguments.get("base_url") or configured_base_url(),
         parameters=[
             {"name": "model_id", "in": "path", "required": "{model_id}" in path, "schema": {"type": "string"}},
             {"name": "id", "in": "path", "required": "{id}" in path, "schema": {"type": "string"}},
             {"name": "Action", "in": "query", "required": False, "schema": {"type": "string"}},
         ],
         content_type="application/json" if request_body is not None else None,
-        body_schema={"type": "object", "additionalProperties": True} if request_body is not None else None,
+        body_schema={} if request_body is not None else None,
         example=None,
         doc_url="https://video-ai.apifox.cn",
         tool_name="littleorange_raw_request",
@@ -198,7 +396,7 @@ async def _raw_request(arguments: dict[str, Any]) -> list[TextContent]:
     call_arguments = {
         key: value
         for key, value in arguments.items()
-        if key in {"api_key", "model_id", "id", "Action", "request_body"} and value is not None
+        if key in {"base_url", "api_key", "model_id", "id", "Action", "request_body", "query_params", "headers"} and value is not None
     }
     result = await call_operation(op, call_arguments)
     return [TextContent(type="text", text=to_json_text(result))]

@@ -5,10 +5,20 @@ import os
 import re
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import jsonschema
 
 from .catalog import Operation, build_tool_schema
+from .config import (
+    DEFAULT_BASE_URL,
+    DEFAULT_TIMEOUT_SECONDS,
+    LittleOrangeConfigError,
+    get_base_url,
+    get_debug_enabled,
+    get_log_file,
+    get_timeout_seconds,
+)
 
 
 class LittleOrangeRequestError(RuntimeError):
@@ -22,8 +32,16 @@ class PreparedRequest:
     headers: dict[str, str]
     params: dict[str, Any]
     content_type: str | None
-    json_body: dict[str, Any] | None
+    json_body: Any
     form_data: dict[str, Any] | None
+
+
+def configured_base_url() -> str:
+    return get_base_url()
+
+
+def configured_timeout_seconds() -> float:
+    return get_timeout_seconds()
 
 
 def _api_key(arguments: dict[str, Any]) -> str:
@@ -60,6 +78,9 @@ def _query_params(operation: Operation, arguments: dict[str, Any]) -> dict[str, 
             params[name] = value
         elif param.get("required"):
             raise LittleOrangeRequestError(f"缺少查询参数: {name}")
+    extra_query = arguments.get("query_params")
+    if isinstance(extra_query, dict):
+        params.update({k: v for k, v in extra_query.items() if v is not None})
     return params
 
 
@@ -84,6 +105,16 @@ def _normalize_request_body(operation: Operation, body: Any) -> Any:
     return normalized
 
 
+def _merge_url_query(url: str, params: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    parsed = urlparse(url)
+    if not parsed.query:
+        return url, params
+    merged = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    merged.update(params)
+    clean_url = urlunparse(parsed._replace(query=""))
+    return clean_url, merged
+
+
 def build_request(operation: Operation, arguments: dict[str, Any]) -> PreparedRequest:
     normalized_arguments = dict(arguments)
     if operation.body_schema is not None:
@@ -92,19 +123,29 @@ def build_request(operation: Operation, arguments: dict[str, Any]) -> PreparedRe
         normalized_arguments.pop("request_body", None)
     validate_arguments(operation, normalized_arguments)
     path = _substitute_path(operation.path, normalized_arguments)
-    url = operation.server.rstrip("/") + path
+    server = get_base_url(normalized_arguments.get("base_url") or operation.server or DEFAULT_BASE_URL)
+    url = server + path
     content_type = operation.content_type
     headers = {"Authorization": f"Bearer {_api_key(normalized_arguments)}"}
+    custom_headers = normalized_arguments.get("headers")
+    if isinstance(custom_headers, dict):
+        for key, value in custom_headers.items():
+            if key.lower() == "authorization" or value is None:
+                continue
+            headers[str(key)] = str(value)
     params = _query_params(operation, normalized_arguments)
+    url, params = _merge_url_query(url, params)
     body = normalized_arguments.get("request_body")
 
     json_body = None
     form_data = None
     if body is not None:
         if content_type == "multipart/form-data":
+            if not isinstance(body, dict):
+                raise LittleOrangeRequestError("multipart/form-data 请求体必须是对象。")
             form_data = dict(body)
         else:
-            json_body = dict(body)
+            json_body = body
             headers["Content-Type"] = content_type or "application/json"
     return PreparedRequest(
         method=operation.method,
@@ -117,12 +158,50 @@ def build_request(operation: Operation, arguments: dict[str, Any]) -> PreparedRe
     )
 
 
+def redact_url(url: str) -> str:
+    parsed = urlparse(url)
+    if not parsed.query:
+        return url
+    pairs = parse_qsl(parsed.query, keep_blank_values=True)
+    redacted_pairs = []
+    for key, value in pairs:
+        if any(token in key.lower() for token in ("key", "token", "secret", "auth")):
+            redacted_pairs.append((key, "***"))
+        else:
+            redacted_pairs.append((key, value))
+    return urlunparse(parsed._replace(query=urlencode(redacted_pairs)))
+
+
+def _safe_request_summary(request: PreparedRequest) -> dict[str, Any]:
+    return {
+        "method": request.method,
+        "url": redact_url(request.url),
+        "params": request.params,
+        "content_type": request.content_type,
+    }
+
+
+def _log_debug(event: dict[str, Any]) -> None:
+    if not get_debug_enabled():
+        return
+    path = get_log_file()
+    if not path:
+        return
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(event, ensure_ascii=False) + "\n")
+
+
 async def call_operation(operation: Operation, arguments: dict[str, Any]) -> dict[str, Any]:
-    # Import lazily so catalog/schema tests can run without optional runtime deps installed.
     import httpx
 
-    request = build_request(operation, arguments)
-    timeout = float(os.getenv("LITTLEORANGE_TIMEOUT", "120"))
+    try:
+        request = build_request(operation, arguments)
+        timeout = configured_timeout_seconds()
+    except (LittleOrangeConfigError, jsonschema.ValidationError) as exc:
+        raise LittleOrangeRequestError(str(exc)) from exc
+
+    _log_debug({"event": "request.start", **_safe_request_summary(request)})
+
     async with httpx.AsyncClient(timeout=timeout) as client:
         try:
             if request.form_data is not None:
@@ -144,14 +223,48 @@ async def call_operation(operation: Operation, arguments: dict[str, Any]) -> dic
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             text = exc.response.text[:4000]
-            raise LittleOrangeRequestError(f"HTTP {exc.response.status_code}: {text}") from exc
+            _log_debug({
+                "event": "request.http_error",
+                **_safe_request_summary(request),
+                "status_code": exc.response.status_code,
+                "response_excerpt": text,
+            })
+            raise LittleOrangeRequestError(
+                json.dumps(
+                    {
+                        "status": "error",
+                        "error_type": "http_error",
+                        "message": f"HTTP {exc.response.status_code}",
+                        "details": {
+                            **_safe_request_summary(request),
+                            "status_code": exc.response.status_code,
+                            "response_excerpt": text,
+                        },
+                    },
+                    ensure_ascii=False,
+                )
+            ) from exc
         except httpx.HTTPError as exc:
-            raise LittleOrangeRequestError(f"请求失败: {exc}") from exc
+            _log_debug({"event": "request.network_error", **_safe_request_summary(request), "error": str(exc)})
+            raise LittleOrangeRequestError(
+                json.dumps(
+                    {
+                        "status": "error",
+                        "error_type": "network_error",
+                        "message": "请求失败",
+                        "details": {**_safe_request_summary(request), "error": str(exc)},
+                    },
+                    ensure_ascii=False,
+                )
+            ) from exc
 
     content_type = response.headers.get("content-type", "")
     if "application/json" in content_type:
-        return response.json()
-    return {"text": response.text}
+        result = response.json()
+    else:
+        result = {"text": response.text}
+    _log_debug({"event": "request.success", **_safe_request_summary(request), "response_type": content_type or "text/plain"})
+    return result
 
 
 def to_json_text(data: Any) -> str:

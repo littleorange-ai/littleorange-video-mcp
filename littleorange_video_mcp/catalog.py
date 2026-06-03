@@ -120,14 +120,6 @@ def operation_by_tool_name(catalog: Catalog, tool_name: str) -> Operation:
 
 
 def _dreamina_create_body_schema(schema: dict[str, Any]) -> dict[str, Any]:
-    """Loosen Apifox's Dreamina schema to match its own examples and API behavior.
-
-    The upstream OpenAPI marks `role`, `resolution`, `generate_audio`, and
-    `return_last_frame` as required even though the official examples omit them.
-    More importantly, forcing `role` on `type: text` causes clients to send a
-    role in text content, and the API rejects that with "role is not supported
-    in text content".
-    """
     fixed = copy.deepcopy(schema)
     fixed["required"] = ["model", "content"]
     fixed.setdefault("description", "Dreamina-Seedance 2.0 创建视频请求体；文本 content 不要带 role，媒体 content 才使用 role。")
@@ -190,10 +182,24 @@ def _dreamina_create_body_schema(schema: dict[str, Any]) -> dict[str, Any]:
 
 def build_tool_schema(operation: Operation) -> dict[str, Any]:
     properties: dict[str, Any] = {
+        "base_url": {
+            "type": "string",
+            "description": "可选。LittleOrange API Base URL；不传时使用环境变量 LITTLEORANGE_BASE_URL，默认 https://vg-api.aig-ai.com。",
+        },
         "api_key": {
             "type": "string",
             "description": "可选。LittleOrange 视频 API Key；不传时使用环境变量 LITTLEORANGE_API_KEY。不要在对话中泄露真实密钥。",
-        }
+        },
+        "headers": {
+            "type": "object",
+            "description": "可选。附加请求头；Authorization 会被忽略并始终由 api_key 生成。",
+            "additionalProperties": {"type": "string"},
+        },
+        "query_params": {
+            "type": "object",
+            "description": "可选。附加查询参数；用于 raw/调试或文档尚未覆盖的扩展参数。",
+            "additionalProperties": True,
+        },
     }
     required: list[str] = []
 
@@ -203,7 +209,7 @@ def build_tool_schema(operation: Operation) -> dict[str, Any]:
         if param.get("required") and name != "Action":
             required.append(name)
 
-    if operation.body_schema:
+    if operation.body_schema is not None:
         body_schema = _sanitize_json_schema(operation.body_schema)
         if operation.doc_id == "436902105e0":
             body_schema = _dreamina_create_body_schema(body_schema)
@@ -229,10 +235,13 @@ def operation_description(operation: Operation) -> str:
         props = ", ".join((operation.body_schema.get("properties") or {}).keys())
         body_hint = f"\n请求体参数: {props}"
     params_hint = ", ".join(p["name"] for p in operation.parameters) or "无"
+    example_hint = ""
+    if operation.tool_name in {"vidu_t2v", "veo31_t2v", "dreamina_create_video"}:
+        example_hint = "\n最小示例：传 model_id 和 request_body，request_body 至少包含模型名与 prompt/content。"
     return (
         f"{operation.folder} / {operation.summary}\n"
         f"HTTP: {operation.method} {operation.path}\n"
-        f"路径/查询参数: {params_hint}{body_hint}\n"
+        f"路径/查询参数: {params_hint}{body_hint}{example_hint}\n"
         f"文档: {operation.doc_url}\n"
-        "注意：该工具会调用付费/限额 API；仅在用户明确要求生成、查询或管理素材时使用。"
+        "适用场景：当用户明确要创建/查询该模型任务时使用。注意：该工具会调用付费/限额 API。"
     )
