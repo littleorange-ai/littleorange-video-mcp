@@ -851,7 +851,7 @@
                 "role": {
                   "type": "string",
                   "title": "媒体角色",
-                  "description": "媒体用途标识，可选值：reference_image(参考图)、first_frame(首帧)、last_frame(尾帧)、reference_video(参考视频)、reference_audio(参考音频)",
+                  "description": "媒体用途标识，可选值：reference_image(参考图)、first_frame(首帧)、last_frame(尾帧)、reference_video(参考视频)、reference_audio(参考音频)\n#两类 role 不能共存：\n- 首尾帧组：first_frame / last_frame（锁定开头、结尾画面） \n- 参考素材组：reference_image / reference_video / reference_audio（参考画面、参考运镜、参考 BGM）\n\n",
                   "enum": [
                     "reference_image",
                     "first_frame",
