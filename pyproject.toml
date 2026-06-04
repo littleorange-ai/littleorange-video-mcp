@@ -1,6 +1,6 @@
 [project]
 name = "littleorange-video-mcp"
-version = "0.0.2"
+version = "0.0.3"
 description = "MCP server for LittleOrange video model APIs"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -8,6 +8,7 @@ dependencies = [
   "mcp[cli]>=1.6.0",
   "httpx>=0.28.1",
   "jsonschema>=4.23.0",
+  "PyYAML>=6.0.0",
 ]
 
 [project.scripts]

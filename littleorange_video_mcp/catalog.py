@@ -1,11 +1,29 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
+import os
 import re
+import time
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from importlib import resources
+from pathlib import Path
 from typing import Any
+
+try:
+    import yaml
+except ModuleNotFoundError:  # pragma: no cover - dependency is declared in pyproject
+    yaml = None
+
+APIFOX_DOCS_BASE_URL = "https://video-ai.apifox.cn"
+APIFOX_LLMS_URL = f"{APIFOX_DOCS_BASE_URL}/llms.txt"
+CATALOG_CACHE_VERSION = 1
+DEFAULT_CATALOG_REFRESH_SECONDS = 6 * 60 * 60
+HTTP_TIMEOUT_SECONDS = 20
+HTTP_USER_AGENT = "littleorange-video-mcp/catalog-refresh"
 
 
 @dataclass(frozen=True)
@@ -69,6 +87,8 @@ DOC_ID_TOOL_NAMES = {
     "463697822e0": "dreamina_delete_asset",
 }
 
+HTTP_METHODS = {"get", "post", "put", "patch", "delete"}
+
 
 def _normalize_action_default(value: Any) -> Any:
     if isinstance(value, list) and len(value) == 1:
@@ -101,13 +121,285 @@ def _sanitize_json_schema(schema: Any) -> Any:
     return schema
 
 
-def load_catalog() -> Catalog:
+def _catalog_cache_path() -> Path:
+    raw = os.getenv("LITTLEORANGE_CATALOG_CACHE_FILE")
+    if raw:
+        return Path(raw).expanduser()
+    cache_home = Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache"))
+    return cache_home / "littleorange-video-mcp" / "api_catalog.json"
+
+
+def _catalog_auto_update_enabled() -> bool:
+    raw = os.getenv("LITTLEORANGE_CATALOG_AUTO_UPDATE", "1").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
+def _catalog_refresh_seconds() -> int:
+    raw = os.getenv("LITTLEORANGE_CATALOG_REFRESH_SECONDS")
+    if raw is None or raw.strip() == "":
+        return DEFAULT_CATALOG_REFRESH_SECONDS
+    try:
+        value = int(raw)
+    except ValueError:
+        return DEFAULT_CATALOG_REFRESH_SECONDS
+    return max(0, value)
+
+
+def _load_packaged_catalog_data() -> dict[str, Any]:
     with resources.files("littleorange_video_mcp").joinpath("api_catalog.json").open("r", encoding="utf-8") as f:
-        data = json.load(f)
+        return json.load(f)
+
+
+def _load_cached_catalog_data() -> dict[str, Any] | None:
+    path = _catalog_cache_path()
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(data, dict) or not isinstance(data.get("operations"), list):
+        return None
+    return data
+
+
+def _cache_is_fresh(data: dict[str, Any]) -> bool:
+    refresh_seconds = _catalog_refresh_seconds()
+    if refresh_seconds == 0:
+        return False
+    generated_at = data.get("generated_at")
+    if not isinstance(generated_at, (int, float)):
+        return False
+    return time.time() - float(generated_at) < refresh_seconds
+
+
+def _write_catalog_cache(data: dict[str, Any]) -> None:
+    path = _catalog_cache_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with tmp.open("w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    tmp.replace(path)
+
+
+def _http_get_text(url: str) -> str:
+    request = urllib.request.Request(url, headers={"User-Agent": HTTP_USER_AGENT})
+    with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_SECONDS) as response:
+        return response.read().decode("utf-8", "replace")
+
+
+def _discover_api_doc_urls(llms_text: str) -> list[str]:
+    if "## API Docs" in llms_text:
+        llms_text = llms_text.split("## API Docs", 1)[1]
+    urls = re.findall(r"https://video-ai\.apifox\.cn/[0-9A-Za-z]+e0\.md", llms_text)
+    seen: set[str] = set()
+    result: list[str] = []
+    for url in urls:
+        if url not in seen:
+            seen.add(url)
+            result.append(url)
+    return result
+
+
+def _extract_first_yaml_block(markdown: str, doc_url: str) -> dict[str, Any] | None:
+    if yaml is None:
+        raise RuntimeError("PyYAML is required to refresh the Apifox OpenAPI catalog")
+    match = re.search(r"```ya?ml\s*(.*?)```", markdown, flags=re.IGNORECASE | re.DOTALL)
+    if not match:
+        return None
+    data = yaml.safe_load(match.group(1))
+    return data if isinstance(data, dict) else None
+
+
+def _request_body(operation: dict[str, Any]) -> tuple[str | None, dict[str, Any] | None, Any]:
+    request_body = operation.get("requestBody") or {}
+    content = request_body.get("content") or {}
+    if not isinstance(content, dict) or not content:
+        return None, None, None
+    preferred_types = ["application/json", "multipart/form-data", *content.keys()]
+    for content_type in preferred_types:
+        media = content.get(content_type)
+        if isinstance(media, dict):
+            schema = media.get("schema")
+            example = media.get("example")
+            if example is None:
+                examples = media.get("examples")
+                if isinstance(examples, dict) and examples:
+                    first = next(iter(examples.values()))
+                    if isinstance(first, dict):
+                        example = first.get("value")
+            return content_type, copy.deepcopy(schema) if isinstance(schema, dict) else None, example
+    return None, None, None
+
+
+def _server_url(spec: dict[str, Any]) -> str:
+    servers = spec.get("servers")
+    if isinstance(servers, list) and servers:
+        first = servers[0]
+        if isinstance(first, dict) and isinstance(first.get("url"), str):
+            return first["url"].rstrip("/")
+    return "https://vg-api.aig-ai.com"
+
+
+def _stable_generated_tool_name(raw: dict[str, Any], used: set[str]) -> str:
+    doc_id = raw["doc_id"]
+    mapped = DOC_ID_TOOL_NAMES.get(doc_id)
+    if mapped:
+        used.add(mapped)
+        return mapped
+
+    source = "_".join(filter(None, [raw.get("folder", ""), raw.get("summary", "")])).lower()
+    name = re.sub(r"[^a-z0-9]+", "_", source).strip("_")
+    if not name or len(name) > 52:
+        name = "api_" + doc_id.replace("-", "_")
+    name = name[:58].strip("_") or "api"
+    base = name
+    suffix = 2
+    while name in used:
+        tail = f"_{suffix}"
+        name = f"{base[:60 - len(tail)]}{tail}"
+        suffix += 1
+    used.add(name)
+    return name
+
+
+def _operation_from_spec(doc_url: str, spec: dict[str, Any]) -> list[dict[str, Any]]:
+    doc_id = doc_url.rsplit("/", 1)[-1].removesuffix(".md")
+    server = _server_url(spec)
+    operations: list[dict[str, Any]] = []
+    paths = spec.get("paths") or {}
+    if not isinstance(paths, dict):
+        return operations
+    for path, path_item in paths.items():
+        if not isinstance(path_item, dict):
+            continue
+        for method, operation in path_item.items():
+            method_lower = str(method).lower()
+            if method_lower not in HTTP_METHODS or not isinstance(operation, dict):
+                continue
+            parameters = []
+            for param in operation.get("parameters") or []:
+                if not isinstance(param, dict):
+                    continue
+                if param.get("in") == "header" and str(param.get("name", "")).lower() == "authorization":
+                    continue
+                parameters.append(copy.deepcopy(param))
+            content_type, body_schema, example = _request_body(operation)
+            folder = operation.get("x-apifox-folder") or "/".join(operation.get("tags") or [])
+            method_upper = method_lower.upper()
+            summary = operation.get("summary") or operation.get("operationId") or f"{method_upper} {path}"
+            operations.append(
+                {
+                    "doc_id": doc_id,
+                    "title": summary,
+                    "summary": summary,
+                    "folder": folder or "",
+                    "method": method_upper,
+                    "path": path,
+                    "server": server,
+                    "parameters": parameters,
+                    "content_type": content_type,
+                    "body_schema": body_schema,
+                    "example": example,
+                    "doc_url": doc_url,
+                }
+            )
+    return operations
+
+
+def refresh_catalog_from_apifox() -> dict[str, Any]:
+    """Fetch Apifox markdown OpenAPI docs and return a generated catalog."""
+    llms_text = _http_get_text(APIFOX_LLMS_URL)
+    doc_urls = _discover_api_doc_urls(llms_text)
+    if not doc_urls:
+        raise RuntimeError("No API docs found in Apifox llms.txt")
+
+    operations: list[dict[str, Any]] = []
+
+    def fetch_operations(doc_url: str) -> list[dict[str, Any]]:
+        markdown = _http_get_text(doc_url)
+        spec = _extract_first_yaml_block(markdown, doc_url)
+        if spec is None:
+            return []
+        return _operation_from_spec(doc_url, spec)
+
+    with ThreadPoolExecutor(max_workers=min(8, len(doc_urls))) as executor:
+        future_map = {executor.submit(fetch_operations, doc_url): doc_url for doc_url in doc_urls}
+        for future in as_completed(future_map):
+            operations.extend(future.result())
+
+    operations.sort(key=lambda item: doc_urls.index(item["doc_url"]))
+
+    if not operations:
+        raise RuntimeError("No operations generated from Apifox docs")
+
+    used: set[str] = set()
+    for raw in operations:
+        raw["tool_name"] = _stable_generated_tool_name(raw, used)
+
+    digest = hashlib.sha256(json.dumps(operations, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+    return {
+        "cache_version": CATALOG_CACHE_VERSION,
+        "source": APIFOX_LLMS_URL,
+        "generated_at": time.time(),
+        "sha256": digest,
+        "operations": operations,
+    }
+
+
+def _ensure_tool_names(data: dict[str, Any]) -> dict[str, Any]:
+    operations = data.get("operations") or []
+    used: set[str] = set()
+    changed = False
+    for raw in operations:
+        if not isinstance(raw, dict):
+            continue
+        tool_name = raw.get("tool_name")
+        if isinstance(tool_name, str) and tool_name and tool_name not in used:
+            used.add(tool_name)
+            continue
+        raw["tool_name"] = _stable_generated_tool_name(raw, used)
+        changed = True
+    if changed:
+        data = dict(data)
+        data["operations"] = operations
+    return data
+
+
+def load_catalog_data(*, refresh: bool | None = None) -> dict[str, Any]:
+    """Load catalog, refreshing from Apifox when enabled and stale.
+
+    The packaged api_catalog.json is a safe fallback. A refreshed catalog is saved
+    under the user's cache directory, so new official interfaces can appear in the
+    MCP tool list without requiring a new PyPI/GitHub release.
+    """
+    if refresh is None:
+        refresh = _catalog_auto_update_enabled()
+
+    cached = _load_cached_catalog_data()
+    if refresh and cached is not None and _cache_is_fresh(cached):
+        return _ensure_tool_names(cached)
+
+    if refresh:
+        try:
+            fresh = refresh_catalog_from_apifox()
+            _write_catalog_cache(fresh)
+            return _ensure_tool_names(fresh)
+        except Exception:
+            if cached is not None:
+                return _ensure_tool_names(cached)
+
+    return _ensure_tool_names(_load_packaged_catalog_data())
+
+
+def load_catalog(*, refresh: bool | None = None) -> Catalog:
+    data = load_catalog_data(refresh=refresh)
     operations: list[Operation] = []
     for raw in data["operations"]:
-        doc_id = raw["doc_id"]
-        tool_name = DOC_ID_TOOL_NAMES.get(doc_id) or re.sub(r"[^a-z0-9]+", "_", raw["summary"].lower()).strip("_")
+        raw = dict(raw)
+        tool_name = raw.pop("tool_name", None) or DOC_ID_TOOL_NAMES.get(raw["doc_id"])
+        if not tool_name:
+            tool_name = _stable_generated_tool_name(raw, {op.tool_name for op in operations})
         operations.append(Operation(tool_name=tool_name, **raw))
     return Catalog(operations=operations)
 

@@ -37,7 +37,7 @@
 
 ## 📌 覆盖范围
 
-当前 **v0\.0\.2** 版本内置全套工具能力，覆盖视频生成、任务查询、素材管理全流程：
+当前 **v0\.0\.3** 版本内置全套工具能力，覆盖视频生成、任务查询、素材管理全流程：
 
 - ✅ 36 个基础文档接口工具
 
@@ -113,7 +113,7 @@ PyPI 发布版本，一键拉起服务，适配所有 MCP 客户端：
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/littleorange-ai/littleorange-video-mcp.git@0.0.2",
+        "git+https://github.com/littleorange-ai/littleorange-video-mcp.git@v0.0.3",
         "littleorange-video-mcp"
       ],
       "env": {
@@ -154,6 +154,9 @@ PyPI 发布版本，一键拉起服务，适配所有 MCP 客户端：
 | `LITTLEORANGE_FIRST_POLL_DELAY_SECONDS` | 首次轮询延迟时间（单位：秒）   | 5                           | ❌ 否 |
 | `LITTLEORANGE_DEBUG`                    | 调试日志开关（1开启 / 0关闭）  | 0                           | ❌ 否 |
 | `LITTLEORANGE_LOG_FILE`                 | 调试日志本地存储路径           | 无                          | ❌ 否 |
+| `LITTLEORANGE_CATALOG_AUTO_UPDATE`      | 启动时自动刷新 Apifox 接口目录与工具映射（0关闭/1开启） | 1 | ❌ 否 |
+| `LITTLEORANGE_CATALOG_REFRESH_SECONDS`  | 接口目录缓存刷新间隔（秒）；设为0表示每次启动都检查官方文档 | 21600 | ❌ 否 |
+| `LITTLEORANGE_CATALOG_CACHE_FILE`       | 自动刷新后的接口目录缓存文件路径 | 系统缓存目录 | ❌ 否 |
 
 > **⚠️ 重要说明**：轮询参数支持双层优先级，单次调用传入参数可覆盖全局环境变量配置，灵活适配不同任务场景。
 >
@@ -354,9 +357,17 @@ python3 -m unittest discover -s tests -v
 
 ### 文档与接口更新
 
-项目接口目录由 Apifox OpenAPI 文档自动生成，文件路径：`littleorange_video_mcp/api_catalog.json`
+MCP 服务启动时会自动读取 Apifox 官方 OpenAPI 文档并生成运行时接口目录，缓存文件默认位于系统缓存目录。官方接口更新后，用户重启 MCP 服务即可自动刷新接口目录和工具映射，不需要等待新的 MCP/PyPI 版本发布。
 
-官方接口更新后，需重新生成接口目录并更新工具映射，过渡期可使用 `littleorange_raw_request` 临时适配新接口。
+内置兜底目录文件路径：`littleorange_video_mcp/api_catalog.json`。当网络不可用或官方文档临时不可访问时，会自动使用最近一次缓存；如果没有缓存，则使用包内置目录。
+
+可配置项：
+
+- `LITTLEORANGE_CATALOG_AUTO_UPDATE=1`：默认开启自动更新；设为 `0` 可关闭。
+- `LITTLEORANGE_CATALOG_REFRESH_SECONDS=21600`：缓存刷新间隔，默认 6 小时；设为 `0` 表示每次启动都检查官方文档。
+- `LITTLEORANGE_CATALOG_CACHE_FILE=/path/to/api_catalog.json`：自定义缓存文件路径。
+
+过渡期或新接口尚未形成稳定封装命名时，可使用 `littleorange_raw_request` 临时适配新接口。
 
 ---
 
@@ -364,6 +375,7 @@ python3 -m unittest discover -s tests -v
 
 | 版本号   | 发布日期     | 核心更新内容                                                 |
 | -------- | ------------ | ------------------------------------------------------------ |
+| v0\.0\.3 | 2026\-06\-04 | 新增启动时自动刷新 Apifox 官方文档接口目录与工具映射；清理发布包冗余文档 |
 | v0\.0\.2 | 2026\-06\-03 | 新增可自定义轮询参数、高层Agent工具、结构化错误返回、文件调试日志；优化TRAE/uvx部署配置 |
 | v0\.0\.1 | 2026\-06\-02 | 项目首次正式发布，完成基础视频模型接口封装与MCP服务搭建      |
 

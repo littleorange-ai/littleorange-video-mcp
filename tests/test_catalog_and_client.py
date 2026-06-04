@@ -4,6 +4,8 @@ import tempfile
 import unittest
 from unittest import IsolatedAsyncioTestCase, mock
 
+os.environ.setdefault("LITTLEORANGE_CATALOG_AUTO_UPDATE", "0")
+
 from littleorange_video_mcp.autopoll import (
     AUTO_POLL_TOOL_NAMES,
     configured_first_poll_delay_seconds,
@@ -233,6 +235,76 @@ class CatalogAndClientTests(unittest.TestCase):
                 os.environ.pop("LITTLEORANGE_FIRST_POLL_DELAY_SECONDS", None)
             else:
                 os.environ["LITTLEORANGE_FIRST_POLL_DELAY_SECONDS"] = old_first_delay
+
+    def test_auto_refresh_catalog_from_apifox_docs(self):
+        import littleorange_video_mcp.catalog as catalog_module
+
+        llms_text = "## API Docs\n- 示例 [新接口](https://video-ai.apifox.cn/999999999e0.md):"
+        markdown = """
+# 新接口
+```yaml
+openapi: 3.0.1
+paths:
+  /v1/new-endpoint/{id}:
+    post:
+      summary: 新接口
+      tags:
+        - 自动更新
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prompt:
+                  type: string
+              required:
+                - prompt
+            example:
+              prompt: hello
+servers:
+  - url: https://vg-api.aig-ai.com
+```
+"""
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_file = os.path.join(tmpdir, "api_catalog.json")
+
+            def fake_get(url):
+                if url.endswith("llms.txt"):
+                    return llms_text
+                if url.endswith("999999999e0.md"):
+                    return markdown
+                raise AssertionError(url)
+
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "LITTLEORANGE_CATALOG_AUTO_UPDATE": "1",
+                    "LITTLEORANGE_CATALOG_REFRESH_SECONDS": "0",
+                    "LITTLEORANGE_CATALOG_CACHE_FILE": cache_file,
+                },
+                clear=False,
+            ), mock.patch.object(catalog_module, "_http_get_text", side_effect=fake_get):
+                refreshed = load_catalog(refresh=True)
+
+            names = {op.tool_name for op in refreshed.operations}
+            self.assertIn("api_999999999e0", names)
+            new_op = operation_by_tool_name(refreshed, "api_999999999e0")
+            self.assertEqual(new_op.path, "/v1/new-endpoint/{id}")
+            self.assertEqual(new_op.parameters[0]["name"], "id")
+            self.assertTrue(os.path.exists(cache_file))
 
     def test_config_validation_errors_are_friendly(self):
         with mock.patch.dict(os.environ, {"LITTLEORANGE_MAX_POLL_ATTEMPTS": "abc"}, clear=False):
