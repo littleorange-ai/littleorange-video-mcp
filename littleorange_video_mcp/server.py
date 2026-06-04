@@ -29,6 +29,31 @@ catalog = load_catalog()
 app = Server(SERVER_NAME)
 
 
+def _is_force_refresh_enabled() -> bool:
+    """Check if force refresh is enabled via environment variable."""
+    import os
+    raw = os.getenv("LITTLEORANGE_CATALOG_FORCE_REFRESH", "0").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _refresh_catalog_if_needed():
+    """Reload the Apifox-backed catalog when the configured cache is stale.
+
+    The MCP process can stay alive for hours or days in IDE clients.  Loading the
+    catalog only at module import means official Apifox updates never reach the
+    tool list until the user restarts the client.  load_catalog() already handles
+    cache freshness, network failures, and packaged fallback, so calling it at
+    MCP request boundaries keeps tools current without breaking offline startup.
+
+    If LITTLEORANGE_CATALOG_FORCE_REFRESH is set to true, always fetch fresh data
+    from Apifox regardless of cache freshness.
+    """
+    global catalog
+    force_refresh = _is_force_refresh_enabled()
+    catalog = load_catalog(force_refresh=force_refresh)
+    return catalog
+
+
 def _wait_tool_schema(create_tool_name: str) -> dict[str, Any]:
     schema = build_tool_schema(operation_by_tool_name(catalog, create_tool_name))
     props = dict(schema["properties"])
@@ -81,8 +106,9 @@ def _error_payload(error_type: str, message: str, details: dict[str, Any] | None
 
 @app.list_tools()
 async def list_tools(_request: Any | None = None) -> list[Tool]:
+    current_catalog = _refresh_catalog_if_needed()
     tools: list[Tool] = []
-    for operation in catalog.operations:
+    for operation in current_catalog.operations:
         description = operation_description(operation)
         if operation.tool_name in {"vidu_t2v", "vidu_i2v", "veo31_t2v", "dreamina_create_video"}:
             description += "\n建议：需要直接等待结果时，优先使用对应的 _wait 工具。"
@@ -270,6 +296,7 @@ def _route_query_tool(provider: str) -> str:
 
 @app.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
+    _refresh_catalog_if_needed()
     try:
         arguments = arguments or {}
         if name == "littleorange_raw_request":

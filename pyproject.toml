@@ -1,6 +1,6 @@
 [project]
 name = "littleorange-video-mcp"
-version = "0.0.3"
+version = "0.0.4"
 description = "MCP server for LittleOrange video model APIs"
 readme = "README.md"
 requires-python = ">=3.10"

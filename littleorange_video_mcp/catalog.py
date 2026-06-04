@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
 from typing import Any
+from urllib.parse import urljoin, urlparse, urlunparse
 
 try:
     import yaml
@@ -21,9 +22,27 @@ except ModuleNotFoundError:  # pragma: no cover - dependency is declared in pypr
 APIFOX_DOCS_BASE_URL = "https://video-ai.apifox.cn"
 APIFOX_LLMS_URL = f"{APIFOX_DOCS_BASE_URL}/llms.txt"
 CATALOG_CACHE_VERSION = 1
-DEFAULT_CATALOG_REFRESH_SECONDS = 6 * 60 * 60
+DEFAULT_CATALOG_REFRESH_SECONDS = 60 * 60
 HTTP_TIMEOUT_SECONDS = 20
 HTTP_USER_AGENT = "littleorange-video-mcp/catalog-refresh"
+
+
+def _log_catalog_event(message: str, **kwargs) -> None:
+    """Log catalog-related events for debugging purposes."""
+    log_path = os.getenv("LITTLEORANGE_CATALOG_LOG_FILE")
+    if not log_path:
+        return
+    try:
+        import json
+        log_entry = {
+            "timestamp": time.time(),
+            "message": message,
+            **kwargs
+        }
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
 
 
 @dataclass(frozen=True)
@@ -188,14 +207,37 @@ def _http_get_text(url: str) -> str:
         return response.read().decode("utf-8", "replace")
 
 
+def _normalize_doc_url(url: str) -> str | None:
+    """Return a canonical Apifox markdown URL, or None for non-API/doc links."""
+    absolute = urljoin(APIFOX_DOCS_BASE_URL, url.strip())
+    parsed = urlparse(absolute)
+    if parsed.scheme not in {"http", "https"} or parsed.netloc != urlparse(APIFOX_DOCS_BASE_URL).netloc:
+        return None
+    if not parsed.path.endswith(".md"):
+        return None
+    # Strip fragments/query strings so the same doc is only fetched once.
+    return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
+
+
 def _discover_api_doc_urls(llms_text: str) -> list[str]:
+    """Discover every Apifox markdown doc listed under the API Docs section.
+
+    Official Apifox llms.txt currently separates guide pages under "## Docs" and
+    callable API pages under "## API Docs".  Keep only the API section, but do not
+    assume document IDs end in a specific suffix beyond ".md"; Apifox IDs can
+    change format over time (for example e0/f0/m0 pages exist in the docs list).
+    """
     if "## API Docs" in llms_text:
         llms_text = llms_text.split("## API Docs", 1)[1]
-    urls = re.findall(r"https://video-ai\.apifox\.cn/[0-9A-Za-z]+e0\.md", llms_text)
+        next_section = re.search(r"\n##\s+", llms_text)
+        if next_section:
+            llms_text = llms_text[: next_section.start()]
+    raw_urls = re.findall(r"https?://video-ai\.apifox\.cn/[^\s)\]]+\.md(?:[?#][^\s)\]]*)?|/[0-9A-Za-z_-]+\.md(?:[?#][^\s)\]]*)?", llms_text)
     seen: set[str] = set()
     result: list[str] = []
-    for url in urls:
-        if url not in seen:
+    for raw_url in raw_urls:
+        url = _normalize_doc_url(raw_url)
+        if url and url not in seen:
             seen.add(url)
             result.append(url)
     return result
@@ -366,34 +408,63 @@ def _ensure_tool_names(data: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
-def load_catalog_data(*, refresh: bool | None = None) -> dict[str, Any]:
+def load_catalog_data(*, refresh: bool | None = None, force_refresh: bool = False) -> dict[str, Any]:
     """Load catalog, refreshing from Apifox when enabled and stale.
 
     The packaged api_catalog.json is a safe fallback. A refreshed catalog is saved
     under the user's cache directory, so new official interfaces can appear in the
     MCP tool list without requiring a new PyPI/GitHub release.
+
+    Args:
+        refresh: If True, check for updates from Apifox. If None, use environment setting.
+        force_refresh: If True, always fetch from Apifox regardless of cache freshness.
     """
     if refresh is None:
         refresh = _catalog_auto_update_enabled()
 
     cached = _load_cached_catalog_data()
-    if refresh and cached is not None and _cache_is_fresh(cached):
-        return _ensure_tool_names(cached)
-
-    if refresh:
+    
+    if force_refresh:
+        _log_catalog_event("catalog.refresh.force", reason="force_refresh enabled")
         try:
             fresh = refresh_catalog_from_apifox()
             _write_catalog_cache(fresh)
+            _log_catalog_event("catalog.refresh.success", source="apifox", 
+                              operations_count=len(fresh.get("operations", [])),
+                              sha256=fresh.get("sha256"))
             return _ensure_tool_names(fresh)
-        except Exception:
+        except Exception as e:
+            _log_catalog_event("catalog.refresh.failed", error=str(e), fallback_to_cache=cached is not None)
+            if cached is not None:
+                return _ensure_tool_names(cached)
+            raise
+
+    if refresh and cached is not None and _cache_is_fresh(cached):
+        _log_catalog_event("catalog.load.cache_fresh", 
+                          sha256=cached.get("sha256"),
+                          generated_at=cached.get("generated_at"))
+        return _ensure_tool_names(cached)
+
+    if refresh:
+        _log_catalog_event("catalog.refresh.start", reason="cache stale or missing")
+        try:
+            fresh = refresh_catalog_from_apifox()
+            _write_catalog_cache(fresh)
+            _log_catalog_event("catalog.refresh.success", source="apifox",
+                              operations_count=len(fresh.get("operations", [])),
+                              sha256=fresh.get("sha256"))
+            return _ensure_tool_names(fresh)
+        except Exception as e:
+            _log_catalog_event("catalog.refresh.failed", error=str(e), fallback_to_cache=cached is not None)
             if cached is not None:
                 return _ensure_tool_names(cached)
 
+    _log_catalog_event("catalog.load.packaged")
     return _ensure_tool_names(_load_packaged_catalog_data())
 
 
-def load_catalog(*, refresh: bool | None = None) -> Catalog:
-    data = load_catalog_data(refresh=refresh)
+def load_catalog(*, refresh: bool | None = None, force_refresh: bool = False) -> Catalog:
+    data = load_catalog_data(refresh=refresh, force_refresh=force_refresh)
     operations: list[Operation] = []
     for raw in data["operations"]:
         raw = dict(raw)

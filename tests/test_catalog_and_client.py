@@ -19,7 +19,12 @@ from littleorange_video_mcp.autopoll import (
     poll_until_complete,
     query_tool_for_create_tool,
 )
-from littleorange_video_mcp.catalog import build_tool_schema, load_catalog, operation_by_tool_name
+from littleorange_video_mcp.catalog import (
+    build_tool_schema,
+    load_catalog,
+    operation_by_tool_name,
+    _discover_api_doc_urls,
+)
 from littleorange_video_mcp.client import build_request
 from littleorange_video_mcp.config import (
     LittleOrangeConfigError,
@@ -236,10 +241,37 @@ class CatalogAndClientTests(unittest.TestCase):
             else:
                 os.environ["LITTLEORANGE_FIRST_POLL_DELAY_SECONDS"] = old_first_delay
 
+    def test_discover_api_doc_urls_matches_current_apifox_llms_format_only_under_api_docs(self):
+        llms_text = """
+# LittleOrange-视频模型API接口文档
+
+## Docs
+- [各模型API详细接口](https://video-ai.apifox.cn/80330791f0.md):
+- [普通指南](https://video-ai.apifox.cn/8325057m0.md):
+
+## API Docs
+- 示例 [视频创建基础API示例](https://video-ai.apifox.cn/428191615e0.md):
+- 各模型API详细接口 > Sora2 [文生视频接口](https://video-ai.apifox.cn/428252369e0.md):
+- 新格式接口 [未来接口](https://video-ai.apifox.cn/80333873f0.md?utm=1#openapi):
+- 相对链接 [相对接口](/442560446e0.md):
+
+## Other
+- 不应包含 [别的章节](https://video-ai.apifox.cn/999999999e0.md):
+"""
+        self.assertEqual(
+            _discover_api_doc_urls(llms_text),
+            [
+                "https://video-ai.apifox.cn/428191615e0.md",
+                "https://video-ai.apifox.cn/428252369e0.md",
+                "https://video-ai.apifox.cn/80333873f0.md",
+                "https://video-ai.apifox.cn/442560446e0.md",
+            ],
+        )
+
     def test_auto_refresh_catalog_from_apifox_docs(self):
         import littleorange_video_mcp.catalog as catalog_module
 
-        llms_text = "## API Docs\n- 示例 [新接口](https://video-ai.apifox.cn/999999999e0.md):"
+        llms_text = "## API Docs\n- 示例 [新接口](https://video-ai.apifox.cn/999999999f0.md):"
         markdown = """
 # 新接口
 ```yaml
@@ -284,7 +316,7 @@ servers:
             def fake_get(url):
                 if url.endswith("llms.txt"):
                     return llms_text
-                if url.endswith("999999999e0.md"):
+                if url.endswith("999999999f0.md"):
                     return markdown
                 raise AssertionError(url)
 
@@ -300,8 +332,8 @@ servers:
                 refreshed = load_catalog(refresh=True)
 
             names = {op.tool_name for op in refreshed.operations}
-            self.assertIn("api_999999999e0", names)
-            new_op = operation_by_tool_name(refreshed, "api_999999999e0")
+            self.assertIn("api_999999999f0", names)
+            new_op = operation_by_tool_name(refreshed, "api_999999999f0")
             self.assertEqual(new_op.path, "/v1/new-endpoint/{id}")
             self.assertEqual(new_op.parameters[0]["name"], "id")
             self.assertTrue(os.path.exists(cache_file))
@@ -345,6 +377,21 @@ class ServerTests(IsolatedAsyncioTestCase):
         self.assertIn("query_params", by_name["littleorange_raw_request"].inputSchema["properties"])
         self.assertIn("headers", by_name["littleorange_raw_request"].inputSchema["properties"])
         self.assertGreaterEqual(len(tools), 36 + len(AUTO_POLL_TOOL_NAMES) + 7)
+
+    async def test_list_tools_refreshes_catalog_for_long_running_mcp_processes(self):
+        import littleorange_video_mcp.server as server_module
+
+        class DummyOperation:
+            tool_name = "dynamic_new_tool"
+
+        dynamic_catalog = type("DummyCatalog", (), {"operations": [DummyOperation()]})()
+        with mock.patch.object(server_module, "load_catalog", return_value=dynamic_catalog), \
+             mock.patch.object(server_module, "operation_description", return_value="动态接口"), \
+             mock.patch.object(server_module, "build_tool_schema", return_value={"type": "object", "properties": {}, "additionalProperties": False}), \
+             mock.patch.object(server_module, "AUTO_POLL_TOOL_NAMES", []):
+            tools = await list_tools(None)
+
+        self.assertIn("dynamic_new_tool", {tool.name for tool in tools})
 
     async def test_create_and_wait_forwards_base_url_and_uses_query_mapping(self):
         calls = []
